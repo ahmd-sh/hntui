@@ -1,5 +1,5 @@
 import { Loader } from "./Loader"
-import { useTheme } from "../theme"
+import { selectionColors, useTheme } from "../theme"
 
 interface Props {
   view: "list" | "detail"
@@ -11,8 +11,8 @@ export function StatusBar({ view, loading, message }: Props) {
   const t = useTheme()
   const hints =
     view === "list"
-      ? "c/⏎ open · o link · s save/unsave · r refresh · t theme · q quit"
-      : "space collapse · o post link · ⏎ comment link(s) · s save/unsave · h/esc back"
+      ? "j/k move · c/⏎ open · s save · ? help · q quit"
+      : "j/k move · space collapse · ⏎ links · ? help · h/esc back"
   return (
     <box
       flexDirection="row"
@@ -28,7 +28,7 @@ export function StatusBar({ view, loading, message }: Props) {
       borderColor={t.border}
     >
       {loading ? <Loader /> : null}
-      <text fg={t.statusHint}>{message ?? hints}</text>
+      <text fg={t.statusHint} {...selectionColors(t)}>{message ?? hints}</text>
     </box>
   )
 }

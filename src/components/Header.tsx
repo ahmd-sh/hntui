@@ -1,7 +1,7 @@
 import { TextAttributes } from "@opentui/core"
 import type { Category } from "../api/types"
 import { FEED_CATEGORIES } from "../api/types"
-import { useTheme } from "../theme"
+import { selectionColors, useTheme } from "../theme"
 
 interface Props {
   category: Category
@@ -29,15 +29,16 @@ export function Header({ category, onSelect, onHome, showTabs = true }: Props) {
         <text
           bg={t.brandTileBg}
           fg={t.brandTileFg}
+          {...selectionColors(t)}
           attributes={TextAttributes.BOLD}
           onMouseDown={onHome}
         >
           {" Y "}
         </text>
-        <text fg={t.brandText} attributes={TextAttributes.BOLD}>
+        <text fg={t.brandText} {...selectionColors(t)} attributes={TextAttributes.BOLD}>
           HackerNews
         </text>
-        <text fg={t.brandSubtle}>· TUI</text>
+        <text fg={t.brandSubtle} {...selectionColors(t)}>· TUI</text>
       </box>
       {showTabs ? (
         <box flexDirection="row" flexShrink={0} height={1} marginTop={1} gap={1}>
@@ -50,7 +51,7 @@ export function Header({ category, onSelect, onHome, showTabs = true }: Props) {
                 onMouseDown={() => onSelect(c.key)}
                 backgroundColor={active ? t.tabActiveBg : undefined}
               >
-                <text fg={active ? t.tabActiveFg : t.tabInactiveFg}>
+                <text fg={active ? t.tabActiveFg : t.tabInactiveFg} {...selectionColors(t)}>
                   {` ${i + 1} ${c.label} `}
                 </text>
               </box>
@@ -62,7 +63,7 @@ export function Header({ category, onSelect, onHome, showTabs = true }: Props) {
             onMouseDown={() => onSelect("saved")}
             backgroundColor={category === "saved" ? t.tabActiveBg : undefined}
           >
-            <text fg={category === "saved" ? t.tabActiveFg : t.tabInactiveFg}>
+            <text fg={category === "saved" ? t.tabActiveFg : t.tabInactiveFg} {...selectionColors(t)}>
               {" [S]aved "}
             </text>
           </box>

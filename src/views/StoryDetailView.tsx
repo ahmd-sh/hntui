@@ -7,7 +7,7 @@ import type { FlatComment } from "../hooks/useCommentTree"
 import type { Item } from "../api/types"
 import { hostname, htmlToText, relativeTime } from "../utils/format"
 import { openUrl } from "../utils/openUrl"
-import { useTheme } from "../theme"
+import { selectionColors, useTheme } from "../theme"
 
 interface Props {
   story: Item
@@ -51,11 +51,11 @@ export const StoryDetailView = forwardRef<ScrollBoxRenderable, Props>(function S
         borderStyle="single"
         borderColor={t.border}
       >
-        <text fg={t.text} attributes={TextAttributes.BOLD} wrapMode="word">
+        <text fg={t.text} {...selectionColors(t)} attributes={TextAttributes.BOLD} wrapMode="word">
           {saved ? "★ " : ""}
           {story.title ?? "(untitled)"}
         </text>
-        <text>
+        <text {...selectionColors(t)}>
           <span fg={t.stripAccent}>▲ {story.score ?? 0}</span>
           <span fg={t.textDim}>{` by `}</span>
           <span fg={t.textMuted}>{story.by ?? "?"}</span>
@@ -64,7 +64,7 @@ export const StoryDetailView = forwardRef<ScrollBoxRenderable, Props>(function S
           {host ? <span fg={t.textDim}>{`  · ${host}`}</span> : null}
         </text>
         {story.url ? (
-          <text fg={t.link} onMouseDown={() => openUrl(story.url!)}>
+          <text fg={t.link} {...selectionColors(t)} onMouseDown={() => openUrl(story.url!)}>
             {story.url}
           </text>
         ) : null}
@@ -80,7 +80,7 @@ export const StoryDetailView = forwardRef<ScrollBoxRenderable, Props>(function S
       >
         {text ? (
           <box paddingLeft={1} paddingRight={1} paddingTop={1}>
-            <text fg={t.textBody} wrapMode="word">
+            <text fg={t.textBody} {...selectionColors(t)} wrapMode="word">
               {text}
             </text>
           </box>
@@ -89,10 +89,10 @@ export const StoryDetailView = forwardRef<ScrollBoxRenderable, Props>(function S
           {loading ? (
             <box flexDirection="row" alignItems="center" gap={1}>
               <Loader />
-              <text fg={t.statusHint}>Loading comments…</text>
+              <text fg={t.statusHint} {...selectionColors(t)}>Loading comments…</text>
             </box>
           ) : flat.length === 0 ? (
-            <text fg={t.statusHint}>No comments yet.</text>
+            <text fg={t.statusHint} {...selectionColors(t)}>No comments yet.</text>
           ) : (
             flat.map((fc, idx) => (
               <CommentNode

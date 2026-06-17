@@ -14,6 +14,7 @@ import type { Category, FeedCategory, Item } from "./api/types"
 import { openUrl } from "./utils/openUrl"
 import { extractLinks, type Link } from "./utils/format"
 import { LinksPopup } from "./components/LinksPopup"
+import { HelpOverlay } from "./components/HelpOverlay"
 import { ContextMenu, type MenuItem } from "./components/ContextMenu"
 import { ThemeContext, darkTheme, lightTheme } from "./theme"
 
@@ -53,6 +54,7 @@ export function App() {
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[]; cursor: number } | null>(
     null,
   )
+  const [help, setHelp] = useState(false)
   const lastG = useRef<number>(0)
   const listScrollRef = useRef<ScrollBoxRenderable | null>(null)
   const detailScrollRef = useRef<ScrollBoxRenderable | null>(null)
@@ -70,11 +72,11 @@ export function App() {
   }, [flat.length])
 
   useEffect(() => {
-    if (popup || menu) {
+    if (popup || menu || help) {
       detailScrollRef.current?.blur()
       listScrollRef.current?.blur()
     }
-  }, [popup, menu])
+  }, [popup, menu, help])
 
   const openMenuForStory = (item: Item, x: number, y: number) => {
     const items: MenuItem[] = [
@@ -109,6 +111,8 @@ export function App() {
 
   const exitDetail = () => setView({ kind: "list" })
 
+  const openHnLink = (id: number) => openUrl(`https://news.ycombinator.com/item?id=${id}`)
+
   const openLinksFor = (id: number) => {
     const fc = flat.find((f) => f.node.item.id === id)
     if (!fc) return
@@ -136,6 +140,13 @@ export function App() {
     if (name === "q" || (ev.ctrl && name === "c")) {
       renderer?.destroy()
       process.exit(0)
+    }
+
+    const isHelpKey = name === "?" || (name === "/" && ev.shift)
+
+    if (help) {
+      if (name === "escape" || name === "backspace" || isHelpKey) setHelp(false)
+      return
     }
 
     if (menu) {
@@ -170,6 +181,11 @@ export function App() {
       } else if (name === "escape" || name === "backspace") {
         setPopup(null)
       }
+      return
+    }
+
+    if (isHelpKey) {
+      setHelp(true)
       return
     }
 
@@ -214,6 +230,9 @@ export function App() {
       } else if (name === "o") {
         const cur = items[listCursor]
         if (cur?.url) openUrl(cur.url)
+      } else if (name === "y") {
+        const cur = items[listCursor]
+        if (cur) openHnLink(cur.id)
       } else if (name === "s") {
         const cur = items[listCursor]
         if (cur) toggleSave(cur.id)
@@ -248,6 +267,8 @@ export function App() {
         if (cur) openLinksFor(cur.node.item.id)
       } else if (name === "o") {
         if (view.story.url) openUrl(view.story.url)
+      } else if (name === "y") {
+        openHnLink(view.story.id)
       } else if (name === "s") {
         toggleSave(view.story.id)
       } else if (name === "h" || name === "left" || name === "backspace" || name === "escape") {
@@ -342,6 +363,7 @@ export function App() {
             onClose={() => setPopup(null)}
           />
         ) : null}
+        {help ? <HelpOverlay view={view.kind} onClose={() => setHelp(false)} /> : null}
       </box>
     </ThemeContext.Provider>
   )

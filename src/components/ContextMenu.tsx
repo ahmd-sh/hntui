@@ -1,5 +1,5 @@
 import { useTerminalDimensions } from "@opentui/react"
-import { useTheme } from "../theme"
+import { selectionColors, useTheme } from "../theme"
 
 export interface MenuItem {
   label: string
@@ -68,7 +68,7 @@ export function ContextMenu({ x, y, items, cursor, onSelect, onActivate, onClose
                 if (!item.disabled) onSelect(idx)
               }}
             >
-              <text fg={fg}>{item.label}</text>
+              <text fg={fg} {...selectionColors(t)}>{item.label}</text>
             </box>
           )
         })}

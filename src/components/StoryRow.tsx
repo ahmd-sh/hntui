@@ -2,7 +2,7 @@ import type { MouseEvent } from "@opentui/core"
 import { TextAttributes } from "@opentui/core"
 import type { Item } from "../api/types"
 import { hostname, relativeTime } from "../utils/format"
-import { useTheme } from "../theme"
+import { selectionColors, useTheme } from "../theme"
 
 interface Props {
   rank: number
@@ -51,7 +51,7 @@ export function StoryRow({ rank, item, selected, saved, onSelect, onActivate, on
       backgroundColor={bg}
       onMouseDown={handleClick}
     >
-      <text>
+      <text {...selectionColors(t)}>
         <span fg={rankFg}>{`${String(rank).padStart(3, " ")}. `}</span>
         {saved ? <span fg={t.accent}>{"★ "}</span> : null}
         <span fg={titleFg} attributes={selected ? TextAttributes.BOLD : TextAttributes.NONE}>
@@ -59,7 +59,7 @@ export function StoryRow({ rank, item, selected, saved, onSelect, onActivate, on
         </span>
         {host ? <span fg={t.textDim}>{` (${host})`}</span> : null}
       </text>
-      <text>
+      <text {...selectionColors(t)}>
         <span fg={t.textDim}>     </span>
         <span fg={t.accent}>▲ {score}</span>
         <span fg={t.textDim}>{`  by `}</span>

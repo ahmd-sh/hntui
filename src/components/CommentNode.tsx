@@ -1,7 +1,7 @@
 import { useRef } from "react"
 import type { CommentNode as CN } from "../hooks/useCommentTree"
 import { htmlToText, relativeTime } from "../utils/format"
-import { useTheme } from "../theme"
+import { selectionColors, useTheme } from "../theme"
 
 interface Props {
   node: CN
@@ -61,7 +61,7 @@ export function CommentNode({
       marginTop={1}
       backgroundColor={bg}
     >
-      <text onMouseDown={handleHeaderClick}>
+      <text {...selectionColors(t)} onMouseDown={handleHeaderClick}>
         <span fg={accent}>{selected ? "▶ " : "│ "}</span>
         <span fg={t.accent}>{author}</span>
         <span fg={t.textDim}>{` · ${age}`}</span>
@@ -72,7 +72,7 @@ export function CommentNode({
         ) : null}
       </text>
       {!collapsed && body ? (
-        <text fg={t.textBody} wrapMode="word" onMouseDown={handleBodyClick}>
+        <text fg={t.textBody} {...selectionColors(t)} wrapMode="word" onMouseDown={handleBodyClick}>
           {body}
         </text>
       ) : null}

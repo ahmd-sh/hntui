@@ -3,7 +3,7 @@ import type { MouseEvent, ScrollBoxRenderable } from "@opentui/core"
 import { StoryRow } from "../components/StoryRow"
 import { Loader } from "../components/Loader"
 import type { Item } from "../api/types"
-import { useTheme } from "../theme"
+import { selectionColors, useTheme } from "../theme"
 
 interface Props {
   items: Item[]
@@ -44,10 +44,10 @@ export const StoryListView = forwardRef<ScrollBoxRenderable, Props>(function Sto
         {loading ? (
           <>
             <Loader />
-            <text fg={t.statusHint}>{loadingMessage ?? "Loading stories…"}</text>
+            <text fg={t.statusHint} {...selectionColors(t)}>{loadingMessage ?? "Loading stories…"}</text>
           </>
         ) : (
-          <text fg={t.statusHint}>{emptyMessage ?? "No stories"}</text>
+          <text fg={t.statusHint} {...selectionColors(t)}>{emptyMessage ?? "No stories"}</text>
         )}
       </box>
     )

@@ -31,6 +31,9 @@ export interface Theme {
   rowHighlight: ColorInput
   menuBg: ColorInput
 
+  selectionBg: ColorInput
+  selectionFg: ColorInput
+
   scrollTrack: ColorInput
   scrollThumb: ColorInput
 
@@ -66,6 +69,9 @@ export const darkTheme: Theme = {
   rowHighlight: "#ffffff1a",
   menuBg: "#1a1a1a",
 
+  selectionBg: "#ffffff",
+  selectionFg: "#000000",
+
   scrollTrack: "#1a1a1a",
   scrollThumb: "#555555",
 
@@ -74,7 +80,7 @@ export const darkTheme: Theme = {
 
 export const lightTheme: Theme = {
   name: "light",
-  body: "#ffffff",
+  body: "#f6f6ef",
   strip: "#ff6600",
   border: "#f6f6ef",
 
@@ -98,8 +104,11 @@ export const lightTheme: Theme = {
   stripAccent: "#000000",
   link: "#4488ff",
 
-  rowHighlight: "#f6f6ef",
+  rowHighlight: "#ffffff",
   menuBg: "#f6f6ef",
+
+  selectionBg: "#000000",
+  selectionFg: "#ffffff",
 
   scrollTrack: "#ffffff",
   scrollThumb: "#828282",
@@ -111,4 +120,9 @@ export const ThemeContext = createContext<Theme>(darkTheme)
 
 export function useTheme(): Theme {
   return useContext(ThemeContext)
+}
+
+/** Spread onto <text> so mouse selection inverts properly in both themes. */
+export function selectionColors(t: Theme): { selectionBg: ColorInput; selectionFg: ColorInput } {
+  return { selectionBg: t.selectionBg, selectionFg: t.selectionFg }
 }

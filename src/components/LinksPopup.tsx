@@ -1,6 +1,6 @@
 import { TextAttributes } from "@opentui/core"
 import type { Link } from "../utils/format"
-import { useTheme } from "../theme"
+import { selectionColors, useTheme } from "../theme"
 
 interface Props {
   links: Link[]
@@ -52,7 +52,7 @@ export function LinksPopup({ links, cursor, onSelect, onActivate, onClose }: Pro
           />
         ))}
         <box marginTop={1}>
-          <text fg={t.statusHint}>j/k move · o open · esc close</text>
+          <text fg={t.statusHint} {...selectionColors(t)}>j/k move · o open · esc close</text>
         </box>
       </box>
     </box>
@@ -89,13 +89,13 @@ function LinkRow({ link, index, selected, isFirst, onSelect, onActivate }: RowPr
       paddingRight={1}
       onMouseDown={handleClick}
     >
-      <text>
+      <text {...selectionColors(t)}>
         <span fg={selected ? t.accent : t.textDim}>{selected ? "▶ " : "  "}</span>
         <span fg={t.text} attributes={selected ? TextAttributes.BOLD : TextAttributes.NONE}>
           {`${index + 1}. ${link.text}`}
         </span>
       </text>
-      <text fg={t.link}>{`    ${link.url}`}</text>
+      <text fg={t.link} {...selectionColors(t)}>{`    ${link.url}`}</text>
     </box>
   )
 }
