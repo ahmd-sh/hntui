@@ -8,9 +8,11 @@ interface Props {
   onSelect: (c: Category) => void
   onHome: () => void
   showTabs?: boolean
+  // how many views are stacked beneath the current one (internal-link navigation)
+  depth?: number
 }
 
-export function Header({ category, onSelect, onHome, showTabs = true }: Props) {
+export function Header({ category, onSelect, onHome, showTabs = true, depth = 0 }: Props) {
   const t = useTheme()
   return (
     <box
@@ -39,6 +41,10 @@ export function Header({ category, onSelect, onHome, showTabs = true }: Props) {
           HackerNews
         </text>
         <text fg={t.brandSubtle} {...selectionColors(t)}>· TUI</text>
+        <box flexGrow={1} />
+        {depth > 0 ? (
+          <text fg={t.brandSubtle} {...selectionColors(t)}>{`↩ ${depth}`}</text>
+        ) : null}
       </box>
       {showTabs ? (
         <box flexDirection="row" flexShrink={0} height={1} marginTop={1} gap={1}>

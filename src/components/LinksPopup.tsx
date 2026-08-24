@@ -52,7 +52,7 @@ export function LinksPopup({ links, cursor, onSelect, onActivate, onClose }: Pro
           />
         ))}
         <box marginTop={1}>
-          <text fg={t.statusHint} {...selectionColors(t)}>j/k move · o open · esc close</text>
+          <text fg={t.statusHint} {...selectionColors(t)}>j/k move · ⏎ open · o browser · esc close</text>
         </box>
       </box>
     </box>

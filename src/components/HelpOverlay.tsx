@@ -49,11 +49,11 @@ const DETAIL_GROUPS: Group[] = [
     title: "Actions",
     bindings: [
       { keys: "space", desc: "collapse / expand" },
-      { keys: "⏎", desc: "open comment link(s)" },
+      { keys: "⏎", desc: "comment links (HN posts open in-app)" },
       { keys: "o", desc: "open post link in browser" },
       { keys: "y", desc: "open HN page in browser" },
       { keys: "s", desc: "save / unsave" },
-      { keys: "h / esc", desc: "back to list" },
+      { keys: "h / esc", desc: "go back" },
     ],
   },
 ]

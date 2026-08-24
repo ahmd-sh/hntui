@@ -1,6 +1,7 @@
 import { Array as Arr, Cache, Data, Duration, Effect, Schedule, Schema } from "effect"
 import { ItemSchema } from "./types"
 import type { FeedCategory, Item } from "./types"
+import type { HnItemRef } from "../utils/format"
 
 const BASE = "https://hacker-news.firebaseio.com/v0"
 
@@ -119,3 +120,43 @@ export const fetchItems = (
   }).pipe(
     Effect.map((opts) => Arr.getSomes(opts).filter((x): x is Item => x !== null)),
   )
+
+// ---------------------------------------------------------------------------
+// Internal-link resolution: an /item?id=N link may point at a comment, so
+// walk `parent` upward until we reach the root story. Every hop inherits
+// retry/timeout/caching from fetchItem, and interruption aborts mid-chain.
+// ---------------------------------------------------------------------------
+
+// Not an API failure — the link resolved to nothing viewable.
+export class HnItemGone extends Data.TaggedError("HnItemGone")<{
+  readonly id: number
+}> {}
+
+export interface ResolvedLink {
+  story: Item
+  // the comment the link pointed at, to focus after opening (best effort)
+  focusId?: number
+}
+
+const isComment = (i: Item) => i.type === "comment" || i.type === "pollopt"
+
+export const resolveStory = (
+  ref: HnItemRef,
+): Effect.Effect<ResolvedLink, HnError | HnItemGone> =>
+  Effect.gen(function* () {
+    const gone = () => new HnItemGone({ id: ref.id })
+    const first = yield* fetchItem(ref.id)
+    if (!first) return yield* gone()
+    // deleted comments still carry `parent`, so we can walk through them
+    const fromComment = isComment(first) ? first.id : undefined
+    let cur: Item = first
+    let hops = 0
+    while (isComment(cur)) {
+      if (cur.parent == null || ++hops > 64) return yield* gone()
+      const parent: Item | null = yield* fetchItem(cur.parent)
+      if (!parent) return yield* gone()
+      cur = parent
+    }
+    if (cur.deleted || cur.dead) return yield* gone()
+    return { story: cur, focusId: ref.anchorId ?? fromComment }
+  })

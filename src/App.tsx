@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { Effect, Fiber } from "effect"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { useKeyboard, useRenderer } from "@opentui/react"
 import { Header } from "./components/Header"
 import { StatusBar } from "./components/StatusBar"
 import { StoryListView } from "./views/StoryListView"
 import { StoryDetailView } from "./views/StoryDetailView"
+import { NotFoundView } from "./views/NotFoundView"
 import { useStoryIds } from "./hooks/useStoryIds"
 import { useItems } from "./hooks/useItems"
 import { flattenTree, useCommentTree } from "./hooks/useCommentTree"
@@ -13,7 +15,8 @@ import { useHistory } from "./hooks/useHistory"
 import { ALL_CATEGORIES, FEED_CATEGORIES } from "./api/types"
 import type { Category, FeedCategory, Item } from "./api/types"
 import { openUrl } from "./utils/openUrl"
-import { extractLinks, type Link } from "./utils/format"
+import { extractLinks, parseHnItemLink, type HnItemRef, type Link } from "./utils/format"
+import { resolveStory } from "./api/hn"
 import { LinksPopup } from "./components/LinksPopup"
 import { HelpOverlay } from "./components/HelpOverlay"
 import { ContextMenu, type MenuItem } from "./components/ContextMenu"
@@ -21,7 +24,10 @@ import { ThemeContext, darkTheme, lightTheme } from "./theme"
 
 const PAGE_SIZE = 30
 
-type View = { kind: "list" } | { kind: "detail"; story: Item }
+type View = { kind: "list" } | { kind: "detail"; story: Item } | { kind: "notfound" }
+
+// A suspended detail view: enough state to resume it exactly where it was left
+type DetailSnapshot = { story: Item; cursor: number; collapsed: Set<number> }
 
 export function App() {
   const renderer = useRenderer()
@@ -79,6 +85,10 @@ export function App() {
     null,
   )
   const [help, setHelp] = useState(false)
+  const [stack, setStack] = useState<DetailSnapshot[]>([])
+  const [resolving, setResolving] = useState(false)
+  const [pendingFocus, setPendingFocus] = useState<number | null>(null)
+  const resolveFiber = useRef<Fiber.RuntimeFiber<void, never> | null>(null)
   const lastG = useRef<number>(0)
   const listScrollRef = useRef<ScrollBoxRenderable | null>(null)
   const detailScrollRef = useRef<ScrollBoxRenderable | null>(null)
@@ -92,8 +102,40 @@ export function App() {
   }, [items.length])
 
   useEffect(() => {
-    if (detailCursor >= flat.length) setDetailCursor(Math.max(0, flat.length - 1))
-  }, [flat.length])
+    // don't clamp while comments are (re)loading — a restored cursor from the
+    // view stack must survive the brief flat=[] window during the reload
+    if (!commentsLoading && detailCursor >= flat.length)
+      setDetailCursor(Math.max(0, flat.length - 1))
+  }, [flat.length, commentsLoading])
+
+  // After following an internal link, land the cursor on the linked comment
+  // (best effort — it may be deleted or deeper than the fetched tree)
+  useEffect(() => {
+    if (pendingFocus == null || commentsLoading) return
+    const idx = flat.findIndex((f) => f.node.item.id === pendingFocus)
+    if (idx >= 0) setDetailCursor(idx)
+    setPendingFocus(null)
+  }, [pendingFocus, commentsLoading, flat])
+
+  // Speculative prefetch: while the links popup is open, resolve any internal
+  // HN links in the background so ⏎ is instant. The item cache is the handoff —
+  // no state needed here. Closing the popup interrupts all in-flight hops.
+  const popupLinks = popup?.links ?? null
+  useEffect(() => {
+    if (!popupLinks) return
+    const refs = popupLinks
+      .map((l) => parseHnItemLink(l.url))
+      .filter((r): r is HnItemRef => r !== null)
+    if (refs.length === 0) return
+    const fiber = Effect.runFork(
+      Effect.forEach(refs, (ref) => resolveStory(ref).pipe(Effect.ignore), {
+        concurrency: 4,
+      }),
+    )
+    return () => {
+      Effect.runFork(Fiber.interrupt(fiber))
+    }
+  }, [popupLinks])
 
   useEffect(() => {
     if (popup || menu || help) {
@@ -133,14 +175,90 @@ export function App() {
     switchCategory(next)
   }
 
-  const enterDetail = (item: Item) => {
+  const cancelResolve = () => {
+    if (resolveFiber.current) {
+      Effect.runFork(Fiber.interrupt(resolveFiber.current))
+      resolveFiber.current = null
+    }
+    setResolving(false)
+  }
+
+  // Entering from the list starts fresh; entering from a detail view pushes
+  // the current view (with cursor + collapsed state) onto the stack first.
+  const enterDetail = (item: Item, focusId?: number) => {
+    cancelResolve()
     markViewed(item.id)
+    if (view.kind === "detail") {
+      const snap = { story: view.story, cursor: detailCursor, collapsed }
+      setStack((s) => [...s, snap])
+    }
     setView({ kind: "detail", story: item })
     setDetailCursor(0)
     setCollapsed(new Set())
+    setPendingFocus(focusId ?? null)
   }
 
-  const exitDetail = () => setView({ kind: "list" })
+  // esc/h goes back ONE level: resume the previous thread, or exit to the list
+  const popView = () => {
+    cancelResolve()
+    setPendingFocus(null)
+    const top = stack[stack.length - 1]
+    if (!top) {
+      setView({ kind: "list" })
+      return
+    }
+    setStack((s) => s.slice(0, -1))
+    setView({ kind: "detail", story: top.story })
+    setDetailCursor(top.cursor)
+    setCollapsed(top.collapsed)
+  }
+
+  // the Y tile / global shortcuts abandon the whole stack
+  const goHome = () => {
+    cancelResolve()
+    setPendingFocus(null)
+    setStack([])
+    setView({ kind: "list" })
+  }
+
+  const enterNotFound = () => {
+    if (view.kind === "detail") {
+      const snap = { story: view.story, cursor: detailCursor, collapsed }
+      setStack((s) => [...s, snap])
+    }
+    setView({ kind: "notfound" })
+  }
+
+  const startResolve = (ref: HnItemRef) => {
+    cancelResolve()
+    setResolving(true)
+    resolveFiber.current = Effect.runFork(
+      resolveStory(ref).pipe(
+        Effect.match({
+          onSuccess: (r) => {
+            resolveFiber.current = null
+            setResolving(false)
+            enterDetail(r.story, r.focusId)
+          },
+          onFailure: () => {
+            resolveFiber.current = null
+            setResolving(false)
+            enterNotFound()
+          },
+        }),
+      ),
+    )
+  }
+
+  const openLink = (link: Link) => {
+    const ref = parseHnItemLink(link.url)
+    if (ref) {
+      setPopup(null)
+      startResolve(ref)
+    } else {
+      openUrl(link.url)
+    }
+  }
 
   const openHnLink = (id: number) => openUrl(`https://news.ycombinator.com/item?id=${id}`)
 
@@ -206,12 +324,21 @@ export function App() {
         setPopup((p) => (p ? { ...p, cursor: max } : p))
       } else if (name === "g") {
         setPopup((p) => (p ? { ...p, cursor: 0 } : p))
-      } else if (name === "o" || name === "return" || name === "enter") {
+      } else if (name === "return" || name === "enter") {
+        const link = popup.links[popup.cursor]
+        if (link) openLink(link)
+      } else if (name === "o") {
         const link = popup.links[popup.cursor]
         if (link) openUrl(link.url)
       } else if (name === "escape" || name === "backspace") {
         setPopup(null)
       }
+      return
+    }
+
+    // esc while a link is resolving cancels it (aborts the fetch chain)
+    if (resolving && (name === "escape" || name === "backspace")) {
+      cancelResolve()
       return
     }
 
@@ -227,14 +354,14 @@ export function App() {
 
     // Capital S enters saved view from anywhere
     if (name === "s" && ev.shift) {
-      setView({ kind: "list" })
+      goHome()
       switchCategory("saved")
       return
     }
 
     // Capital H enters history view from anywhere
     if (name === "h" && ev.shift) {
-      setView({ kind: "list" })
+      goHome()
       switchCategory("history")
       return
     }
@@ -288,6 +415,10 @@ export function App() {
       } else if (name === "r" && category !== "saved" && category !== "history") {
         setRefreshKey((k) => k + 1)
       }
+    } else if (view.kind === "notfound") {
+      if (name === "h" || name === "left" || name === "backspace" || name === "escape") {
+        popView()
+      }
     } else {
       const max = flat.length - 1
       const pg = pageSize("detail")
@@ -318,13 +449,15 @@ export function App() {
       } else if (name === "s") {
         toggleSave(view.story.id)
       } else if (name === "h" || name === "left" || name === "backspace" || name === "escape") {
-        exitDetail()
+        popView()
       }
     }
   })
 
   const detailLoading = commentsLoading
-  const statusLoading = view.kind === "list" ? listLoading : detailLoading
+  const statusLoading =
+    (view.kind === "list" ? listLoading : view.kind === "detail" ? detailLoading : false) ||
+    resolving
 
   return (
     <ThemeContext.Provider value={theme}>
@@ -333,8 +466,8 @@ export function App() {
           category={category}
           onSelect={switchCategory}
           onHome={() => {
-            if (view.kind === "detail") {
-              exitDetail()
+            if (view.kind !== "list") {
+              goHome()
             } else if (category === "saved" || category === "history") {
               // saved/history are local lists — nothing to refresh, just reset the cursor
               setListCursor(0)
@@ -343,6 +476,7 @@ export function App() {
             }
           }}
           showTabs={view.kind === "list"}
+          depth={stack.length}
         />
         <box flexGrow={1} flexDirection="column" backgroundColor={theme.body}>
           {view.kind === "list" ? (
@@ -378,7 +512,7 @@ export function App() {
                 if (cur) openMenuForStory(cur, ev.x, ev.y)
               }}
             />
-          ) : (
+          ) : view.kind === "detail" ? (
             <StoryDetailView
               key={view.story.id}
               ref={detailScrollRef}
@@ -392,9 +526,16 @@ export function App() {
               onToggleComment={toggleCollapse}
               onOpenLinks={openLinksFor}
             />
+          ) : (
+            <NotFoundView />
           )}
         </box>
-        <StatusBar view={view.kind} category={category} loading={statusLoading} />
+        <StatusBar
+          view={view.kind === "detail" ? "detail" : "list"}
+          category={category}
+          loading={statusLoading}
+          message={view.kind === "notfound" ? "h/esc go back · q quit" : undefined}
+        />
         {menu ? (
           <ContextMenu
             x={menu.x}
@@ -417,12 +558,17 @@ export function App() {
             onSelect={(idx) => setPopup((p) => (p ? { ...p, cursor: idx } : p))}
             onActivate={(idx) => {
               const link = popup.links[idx]
-              if (link) openUrl(link.url)
+              if (link) openLink(link)
             }}
             onClose={() => setPopup(null)}
           />
         ) : null}
-        {help ? <HelpOverlay view={view.kind} onClose={() => setHelp(false)} /> : null}
+        {help ? (
+          <HelpOverlay
+            view={view.kind === "list" ? "list" : "detail"}
+            onClose={() => setHelp(false)}
+          />
+        ) : null}
       </box>
     </ThemeContext.Provider>
   )

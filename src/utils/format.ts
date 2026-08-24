@@ -58,6 +58,29 @@ export function extractLinks(html?: string): Link[] {
   return out
 }
 
+// A link into HN itself: /item?id=POSTID or /item?id=POSTID#COMMENTID.
+// `id` may be a story OR a comment id
+export interface HnItemRef {
+  id: number
+  anchorId?: number
+}
+
+export function parseHnItemLink(url: string): HnItemRef | null {
+  try {
+    const u = new URL(url)
+    const host = u.hostname.replace(/^www\./, "")
+    if (host !== "news.ycombinator.com" || u.pathname !== "/item") return null
+    const id = Number(u.searchParams.get("id"))
+    if (!Number.isInteger(id) || id <= 0) return null
+    const anchor = Number(u.hash.slice(1))
+    const anchorId =
+      u.hash.length > 1 && Number.isInteger(anchor) && anchor > 0 ? anchor : undefined
+    return { id, anchorId }
+  } catch {
+    return null
+  }
+}
+
 export function htmlToText(html?: string): string {
   if (!html) return ""
   return decodeEntities(

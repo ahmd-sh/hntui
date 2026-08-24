@@ -37,24 +37,24 @@ const loadTree = (
   })
 
 export function useCommentTree(rootIds: number[] | undefined, maxDepth = 8) {
-  const [tree, setTree] = useState<CommentNode[]>([])
-  const [loading, setLoading] = useState(false)
+  const key = rootIds && rootIds.length > 0 ? rootIds.join(",") : ""
+  // The tree is tagged with the key it was loaded for, so switching stories
+  // DERIVES empty+loading state on the very same render
+  const [result, setResult] = useState<{ key: string; tree: CommentNode[] }>({
+    key: "",
+    tree: [],
+  })
 
   useEffect(() => {
-    if (!rootIds || rootIds.length === 0) {
-      setTree([])
-      return
-    }
-    setTree([])
-    setLoading(true)
+    if (key === "") return
+    const ids = key.split(",").map(Number)
     const fiber = Effect.runFork(
-      Effect.forEach(rootIds, (id) => loadTree(id, 0, maxDepth), {
+      Effect.forEach(ids, (id) => loadTree(id, 0, maxDepth), {
         concurrency: "unbounded",
       }).pipe(
         Effect.andThen((nodes) =>
           Effect.sync(() => {
-            setTree(nodes.filter((x): x is CommentNode => x !== null))
-            setLoading(false)
+            setResult({ key, tree: nodes.filter((x): x is CommentNode => x !== null) })
           }),
         ),
       ),
@@ -63,9 +63,10 @@ export function useCommentTree(rootIds: number[] | undefined, maxDepth = 8) {
       // interrupts the ENTIRE tree of pending comment fetches at once
       Effect.runFork(Fiber.interrupt(fiber))
     }
-  }, [rootIds?.join(","), maxDepth])
+  }, [key, maxDepth])
 
-  return { tree, loading }
+  const fresh = key !== "" && result.key === key
+  return { tree: fresh ? result.tree : [], loading: key !== "" && !fresh }
 }
 
 export function flattenTree(tree: CommentNode[], collapsed: Set<number>): FlatComment[] {
