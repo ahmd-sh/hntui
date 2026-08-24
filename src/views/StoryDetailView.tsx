@@ -16,13 +16,14 @@ interface Props {
   collapsed: Set<number>
   loading: boolean
   saved?: boolean
+  emptyMessage?: string
   onSelectComment: (idx: number) => void
   onToggleComment: (id: number) => void
   onOpenLinks: (id: number) => void
 }
 
 export const StoryDetailView = forwardRef<ScrollBoxRenderable, Props>(function StoryDetailView(
-  { story, flat, cursor, collapsed, loading, saved, onSelectComment, onToggleComment, onOpenLinks },
+  { story, flat, cursor, collapsed, loading, saved, emptyMessage, onSelectComment, onToggleComment, onOpenLinks },
   ref,
 ) {
   const t = useTheme()
@@ -92,7 +93,7 @@ export const StoryDetailView = forwardRef<ScrollBoxRenderable, Props>(function S
               <text fg={t.statusHint} {...selectionColors(t)}>Loading comments…</text>
             </box>
           ) : flat.length === 0 ? (
-            <text fg={t.statusHint} {...selectionColors(t)}>No comments yet.</text>
+            <text fg={t.statusHint} {...selectionColors(t)}>{emptyMessage ?? "No comments yet."}</text>
           ) : (
             flat.map((fc, idx) => (
               <CommentNode

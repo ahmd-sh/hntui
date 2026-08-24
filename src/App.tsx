@@ -6,7 +6,7 @@ import { Header } from "./components/Header"
 import { StatusBar } from "./components/StatusBar"
 import { StoryListView } from "./views/StoryListView"
 import { StoryDetailView } from "./views/StoryDetailView"
-import { NotFoundView } from "./views/NotFoundView"
+import { MessageView } from "./views/MessageView"
 import { useStoryIds } from "./hooks/useStoryIds"
 import { useItems } from "./hooks/useItems"
 import { flattenTree, useCommentTree } from "./hooks/useCommentTree"
@@ -17,6 +17,8 @@ import type { Category, FeedCategory, Item } from "./api/types"
 import { openUrl } from "./utils/openUrl"
 import { extractLinks, parseHnItemLink, type HnItemRef, type Link } from "./utils/format"
 import { resolveStory } from "./api/hn"
+import type { HnError, HnItemGone } from "./api/hn"
+import { hnErrorMessage } from "./utils/errors"
 import { LinksPopup } from "./components/LinksPopup"
 import { HelpOverlay } from "./components/HelpOverlay"
 import { ContextMenu, type MenuItem } from "./components/ContextMenu"
@@ -24,7 +26,13 @@ import { ThemeContext, darkTheme, lightTheme } from "./theme"
 
 const PAGE_SIZE = 30
 
-type View = { kind: "list" } | { kind: "detail"; story: Item } | { kind: "notfound" }
+type ResolveError = HnError | HnItemGone
+
+type View =
+  | { kind: "list" }
+  | { kind: "detail"; story: Item }
+  // a link that couldn't be opened — keeps the ref so `r` can retry
+  | { kind: "resolveError"; ref: HnItemRef; error: ResolveError }
 
 // A suspended detail view: enough state to resume it exactly where it was left
 type DetailSnapshot = { story: Item; cursor: number; collapsed: Set<number> }
@@ -35,7 +43,7 @@ export function App() {
   const [refreshKey, setRefreshKey] = useState(0)
   const feedCategory: FeedCategory =
     category === "saved" || category === "history" ? "top" : category
-  const { ids, loading: idsLoading } = useStoryIds(feedCategory, refreshKey)
+  const { ids, loading: idsLoading, error: idsError } = useStoryIds(feedCategory, refreshKey)
   const visibleIds = useMemo(() => ids.slice(0, PAGE_SIZE), [ids])
   const { items: feedItems, loading: feedItemsLoading } = useItems(visibleIds)
   const { entries: savedEntries, idSet: savedIds, isSaved, toggle: toggleSave } = useSaved()
@@ -88,13 +96,14 @@ export function App() {
   const [stack, setStack] = useState<DetailSnapshot[]>([])
   const [resolving, setResolving] = useState(false)
   const [pendingFocus, setPendingFocus] = useState<number | null>(null)
+  const [commentsRefresh, setCommentsRefresh] = useState(0)
   const resolveFiber = useRef<Fiber.RuntimeFiber<void, never> | null>(null)
   const lastG = useRef<number>(0)
   const listScrollRef = useRef<ScrollBoxRenderable | null>(null)
   const detailScrollRef = useRef<ScrollBoxRenderable | null>(null)
 
   const story = view.kind === "detail" ? view.story : null
-  const { tree, loading: commentsLoading } = useCommentTree(story?.kids)
+  const { tree, loading: commentsLoading } = useCommentTree(story?.kids, 8, commentsRefresh)
   const flat = useMemo(() => flattenTree(tree, collapsed), [tree, collapsed])
 
   useEffect(() => {
@@ -221,12 +230,14 @@ export function App() {
     setView({ kind: "list" })
   }
 
-  const enterNotFound = () => {
+  const showResolveError = (ref: HnItemRef, error: ResolveError) => {
+    // retrying from an existing error view replaces it — only a detail
+    // view being left behind needs a snapshot pushed
     if (view.kind === "detail") {
       const snap = { story: view.story, cursor: detailCursor, collapsed }
       setStack((s) => [...s, snap])
     }
-    setView({ kind: "notfound" })
+    setView({ kind: "resolveError", ref, error })
   }
 
   const startResolve = (ref: HnItemRef) => {
@@ -240,10 +251,10 @@ export function App() {
             setResolving(false)
             enterDetail(r.story, r.focusId)
           },
-          onFailure: () => {
+          onFailure: (error) => {
             resolveFiber.current = null
             setResolving(false)
-            enterNotFound()
+            showResolveError(ref, error)
           },
         }),
       ),
@@ -415,9 +426,12 @@ export function App() {
       } else if (name === "r" && category !== "saved" && category !== "history") {
         setRefreshKey((k) => k + 1)
       }
-    } else if (view.kind === "notfound") {
+    } else if (view.kind === "resolveError") {
       if (name === "h" || name === "left" || name === "backspace" || name === "escape") {
         popView()
+      } else if (name === "r" && view.error._tag !== "HnItemGone") {
+        // a gone post stays gone — only transient failures earn a retry
+        startResolve(view.ref)
       }
     } else {
       const max = flat.length - 1
@@ -448,6 +462,11 @@ export function App() {
         openHnLink(view.story.id)
       } else if (name === "s") {
         toggleSave(view.story.id)
+      } else if (name === "r") {
+        // retry comments only when they failed to load entirely
+        if (!commentsLoading && flat.length === 0 && (view.story.descendants ?? 0) > 0) {
+          setCommentsRefresh((k) => k + 1)
+        }
       } else if (name === "h" || name === "left" || name === "backspace" || name === "escape") {
         popView()
       }
@@ -479,7 +498,14 @@ export function App() {
           depth={stack.length}
         />
         <box flexGrow={1} flexDirection="column" backgroundColor={theme.body}>
-          {view.kind === "list" ? (
+          {view.kind === "list" && idsError && category !== "saved" && category !== "history" ? (
+            <MessageView
+              art="(×_×)"
+              title="Couldn't load stories"
+              subtitle={hnErrorMessage(idsError)}
+              hint="r to retry"
+            />
+          ) : view.kind === "list" ? (
             <StoryListView
               key={category}
               ref={listScrollRef}
@@ -493,7 +519,9 @@ export function App() {
                   ? "No saved posts yet. Press 's' on a story."
                   : category === "history"
                     ? "No history yet. Posts you open will show up here."
-                    : "No stories"
+                    : ids.length > 0
+                      ? "Couldn't load stories — press r to retry."
+                      : "No stories"
               }
               loadingMessage={
                 category === "saved"
@@ -522,19 +550,44 @@ export function App() {
               collapsed={collapsed}
               loading={detailLoading}
               saved={isSaved(view.story.id)}
+              emptyMessage={
+                (view.story.descendants ?? 0) > 0
+                  ? "Couldn't load comments — press r to retry."
+                  : undefined
+              }
               onSelectComment={setDetailCursor}
               onToggleComment={toggleCollapse}
               onOpenLinks={openLinksFor}
             />
+          ) : view.error._tag === "HnItemGone" ? (
+            <MessageView
+              art={"¯\\_(ツ)_/¯"}
+              title="Post not found"
+              subtitle="This link points to a post that doesn't exist (or was deleted)."
+              hint="esc to go back"
+            />
           ) : (
-            <NotFoundView />
+            <MessageView
+              art="(×_×)"
+              title="Couldn't open that post"
+              subtitle={hnErrorMessage(view.error)}
+              hint="r to retry · esc to go back"
+            />
           )}
         </box>
         <StatusBar
           view={view.kind === "detail" ? "detail" : "list"}
           category={category}
           loading={statusLoading}
-          message={view.kind === "notfound" ? "h/esc go back · q quit" : undefined}
+          message={
+            view.kind === "resolveError"
+              ? view.error._tag === "HnItemGone"
+                ? "h/esc go back · q quit"
+                : "r retry · h/esc go back · q quit"
+              : view.kind === "list" && idsError
+                ? "r retry · q quit"
+                : undefined
+          }
         />
         {menu ? (
           <ContextMenu

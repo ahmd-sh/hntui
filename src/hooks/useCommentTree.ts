@@ -36,8 +36,11 @@ const loadTree = (
     return { item, children }
   })
 
-export function useCommentTree(rootIds: number[] | undefined, maxDepth = 8) {
-  const key = rootIds && rootIds.length > 0 ? rootIds.join(",") : ""
+export function useCommentTree(rootIds: number[] | undefined, maxDepth = 8, refreshKey = 0) {
+  const idsKey = rootIds && rootIds.length > 0 ? rootIds.join(",") : ""
+  // refreshKey re-runs the load for the same story: failed fetches were
+  // evicted from the item cache, so a retry actually refetches them
+  const key = idsKey === "" ? "" : `${refreshKey}|${idsKey}`
   // The tree is tagged with the key it was loaded for, so switching stories
   // DERIVES empty+loading state on the very same render
   const [result, setResult] = useState<{ key: string; tree: CommentNode[] }>({
@@ -47,7 +50,7 @@ export function useCommentTree(rootIds: number[] | undefined, maxDepth = 8) {
 
   useEffect(() => {
     if (key === "") return
-    const ids = key.split(",").map(Number)
+    const ids = key.slice(key.indexOf("|") + 1).split(",").map(Number)
     const fiber = Effect.runFork(
       Effect.forEach(ids, (id) => loadTree(id, 0, maxDepth), {
         concurrency: "unbounded",
