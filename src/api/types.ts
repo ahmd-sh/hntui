@@ -1,5 +1,5 @@
 export type FeedCategory = "top" | "new" | "best" | "ask" | "show" | "job"
-export type Category = FeedCategory | "saved"
+export type Category = FeedCategory | "saved" | "history"
 
 export const FEED_CATEGORIES: { key: FeedCategory; label: string }[] = [
   { key: "top", label: "Top" },
@@ -12,6 +12,7 @@ export const FEED_CATEGORIES: { key: FeedCategory; label: string }[] = [
 
 export const ALL_CATEGORIES: Category[] = [
   ...FEED_CATEGORIES.map((c) => c.key),
+  "history",
   "saved",
 ]
 

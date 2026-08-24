@@ -9,6 +9,7 @@ import { useStoryIds } from "./hooks/useStoryIds"
 import { useItems } from "./hooks/useItems"
 import { flattenTree, useCommentTree } from "./hooks/useCommentTree"
 import { useSaved } from "./hooks/useSaved"
+import { useHistory } from "./hooks/useHistory"
 import { ALL_CATEGORIES, FEED_CATEGORIES } from "./api/types"
 import type { Category, FeedCategory, Item } from "./api/types"
 import { openUrl } from "./utils/openUrl"
@@ -26,11 +27,13 @@ export function App() {
   const renderer = useRenderer()
   const [category, setCategory] = useState<Category>("top")
   const [refreshKey, setRefreshKey] = useState(0)
-  const feedCategory: FeedCategory = category === "saved" ? "top" : category
+  const feedCategory: FeedCategory =
+    category === "saved" || category === "history" ? "top" : category
   const { ids, loading: idsLoading } = useStoryIds(feedCategory, refreshKey)
   const visibleIds = useMemo(() => ids.slice(0, PAGE_SIZE), [ids])
   const { items: feedItems, loading: feedItemsLoading } = useItems(visibleIds)
   const { entries: savedEntries, idSet: savedIds, isSaved, toggle: toggleSave } = useSaved()
+  const { entries: historyEntries, idSet: viewedIds, markViewed, clear: clearHistory } = useHistory()
 
   const savedIdList = useMemo(() => savedEntries.map((e) => e.id), [savedEntries])
   const { items: savedItemsRaw, loading: savedLoading } = useItems(
@@ -42,8 +45,29 @@ export function App() {
     return savedIdList.map((id) => byId.get(id)).filter((x): x is Item => Boolean(x))
   }, [category, savedItemsRaw, savedIdList])
 
-  const items = category === "saved" ? savedItems : feedItems
-  const listLoading = category === "saved" ? savedLoading : idsLoading || feedItemsLoading
+  // History can hold up to HISTORY_CAP ids (for the visited-dimming lookup); only the
+  // most-recent page is fetched/browsable here. The full set still powers de-emphasis.
+  const historyIdList = useMemo(
+    () => historyEntries.slice(0, PAGE_SIZE).map((e) => e.id),
+    [historyEntries],
+  )
+  const { items: historyItemsRaw, loading: historyLoading } = useItems(
+    category === "history" ? historyIdList : [],
+  )
+  const historyItems = useMemo(() => {
+    if (category !== "history") return [] as Item[]
+    const byId = new Map(historyItemsRaw.map((i) => [i.id, i]))
+    return historyIdList.map((id) => byId.get(id)).filter((x): x is Item => Boolean(x))
+  }, [category, historyItemsRaw, historyIdList])
+
+  const items =
+    category === "saved" ? savedItems : category === "history" ? historyItems : feedItems
+  const listLoading =
+    category === "saved"
+      ? savedLoading
+      : category === "history"
+        ? historyLoading
+        : idsLoading || feedItemsLoading
 
   const [view, setView] = useState<View>({ kind: "list" })
   const [listCursor, setListCursor] = useState(0)
@@ -86,7 +110,13 @@ export function App() {
       },
     ]
     if (item.url) {
-      items.push({ label: "Open URL in browser", action: () => openUrl(item.url!) })
+      items.push({
+        label: "Open URL in browser",
+        action: () => {
+          markViewed(item.id)
+          openUrl(item.url!)
+        },
+      })
     }
     items.push({ label: "Open comments", action: () => enterDetail(item) })
     setMenu({ x, y, items, cursor: 0 })
@@ -104,6 +134,7 @@ export function App() {
   }
 
   const enterDetail = (item: Item) => {
+    markViewed(item.id)
     setView({ kind: "detail", story: item })
     setDetailCursor(0)
     setCollapsed(new Set())
@@ -201,6 +232,13 @@ export function App() {
       return
     }
 
+    // Capital H enters history view from anywhere
+    if (name === "h" && ev.shift) {
+      setView({ kind: "list" })
+      switchCategory("history")
+      return
+    }
+
     if (view.kind === "list") {
       const max = items.length - 1
       const pg = pageSize("list")
@@ -229,17 +267,25 @@ export function App() {
         cycleCategory(ev.shift ? -1 : 1)
       } else if (name === "o") {
         const cur = items[listCursor]
-        if (cur?.url) openUrl(cur.url)
+        if (cur?.url) {
+          markViewed(cur.id)
+          openUrl(cur.url)
+        }
       } else if (name === "y") {
         const cur = items[listCursor]
-        if (cur) openHnLink(cur.id)
+        if (cur) {
+          markViewed(cur.id)
+          openHnLink(cur.id)
+        }
       } else if (name === "s") {
         const cur = items[listCursor]
         if (cur) toggleSave(cur.id)
+      } else if (name === "x" && category === "history") {
+        clearHistory()
       } else if (/^[1-6]$/.test(name)) {
         const c = FEED_CATEGORIES[parseInt(name, 10) - 1]
         if (c) switchCategory(c.key)
-      } else if (name === "r" && category !== "saved") {
+      } else if (name === "r" && category !== "saved" && category !== "history") {
         setRefreshKey((k) => k + 1)
       }
     } else {
@@ -289,8 +335,8 @@ export function App() {
           onHome={() => {
             if (view.kind === "detail") {
               exitDetail()
-            } else if (category === "saved") {
-              // saved view: re-derive items by re-running useItems via cursor reset
+            } else if (category === "saved" || category === "history") {
+              // saved/history are local lists — nothing to refresh, just reset the cursor
               setListCursor(0)
             } else {
               setRefreshKey((k) => k + 1)
@@ -307,8 +353,21 @@ export function App() {
               cursor={listCursor}
               loading={listLoading}
               savedIds={savedIds}
-              emptyMessage={category === "saved" ? "No saved posts yet. Press 's' on a story." : "No stories"}
-              loadingMessage={category === "saved" ? "Loading saved posts…" : "Loading stories…"}
+              viewedIds={viewedIds}
+              emptyMessage={
+                category === "saved"
+                  ? "No saved posts yet. Press 's' on a story."
+                  : category === "history"
+                    ? "No history yet. Posts you open will show up here."
+                    : "No stories"
+              }
+              loadingMessage={
+                category === "saved"
+                  ? "Loading saved posts…"
+                  : category === "history"
+                    ? "Loading history…"
+                    : "Loading stories…"
+              }
               onSelect={setListCursor}
               onActivate={(idx) => {
                 const cur = items[idx]
@@ -335,7 +394,7 @@ export function App() {
             />
           )}
         </box>
-        <StatusBar view={view.kind} loading={statusLoading} />
+        <StatusBar view={view.kind} category={category} loading={statusLoading} />
         {menu ? (
           <ContextMenu
             x={menu.x}

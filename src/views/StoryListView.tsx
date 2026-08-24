@@ -10,6 +10,7 @@ interface Props {
   cursor: number
   loading: boolean
   savedIds?: Set<number>
+  viewedIds?: Set<number>
   emptyMessage?: string
   loadingMessage?: string
   onSelect: (idx: number) => void
@@ -23,6 +24,7 @@ export const StoryListView = forwardRef<ScrollBoxRenderable, Props>(function Sto
     cursor,
     loading,
     savedIds,
+    viewedIds,
     emptyMessage,
     loadingMessage,
     onSelect,
@@ -70,6 +72,7 @@ export const StoryListView = forwardRef<ScrollBoxRenderable, Props>(function Sto
           item={item}
           selected={idx === cursor}
           saved={savedIds?.has(item.id)}
+          visited={viewedIds?.has(item.id)}
           onSelect={() => onSelect(idx)}
           onActivate={() => onActivate(idx)}
           onContextMenu={(ev) => onContextMenu?.(idx, ev)}

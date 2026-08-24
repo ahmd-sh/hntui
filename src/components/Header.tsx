@@ -60,6 +60,15 @@ export function Header({ category, onSelect, onHome, showTabs = true }: Props) {
           <box flexGrow={1} />
           <box
             flexShrink={0}
+            onMouseDown={() => onSelect("history")}
+            backgroundColor={category === "history" ? t.tabActiveBg : undefined}
+          >
+            <text fg={category === "history" ? t.tabActiveFg : t.tabInactiveFg} {...selectionColors(t)}>
+              {" [H]istory "}
+            </text>
+          </box>
+          <box
+            flexShrink={0}
             onMouseDown={() => onSelect("saved")}
             backgroundColor={category === "saved" ? t.tabActiveBg : undefined}
           >

@@ -35,6 +35,7 @@ const LIST_GROUPS: Group[] = [
       { keys: "y", desc: "open HN page in browser" },
       { keys: "s", desc: "save / unsave" },
       { keys: "r", desc: "refresh feed" },
+      { keys: "x", desc: "clear history (History view)" },
     ],
   },
 ]
@@ -61,6 +62,7 @@ const GENERAL: Group = {
   title: "General",
   bindings: [
     { keys: "S", desc: "saved posts" },
+    { keys: "H", desc: "view history" },
     { keys: "t", desc: "toggle theme" },
     { keys: "?", desc: "toggle this help" },
     { keys: "q", desc: "quit" },

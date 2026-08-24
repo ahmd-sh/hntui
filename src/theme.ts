@@ -23,6 +23,7 @@ export interface Theme {
   textBody: ColorInput
   textMuted: ColorInput
   textDim: ColorInput
+  textVisited: ColorInput
 
   accent: ColorInput
   stripAccent: ColorInput
@@ -61,6 +62,7 @@ export const darkTheme: Theme = {
   textBody: "#dddddd",
   textMuted: "#aaaaaa",
   textDim: "#666666",
+  textVisited: "#666666",
 
   accent: "#ff6600",
   stripAccent: "#ff6600",
@@ -99,6 +101,7 @@ export const lightTheme: Theme = {
   textBody: "#000000",
   textMuted: "#000000",
   textDim: "#000000",
+  textVisited: "#828282",
 
   accent: "#ff6600",
   stripAccent: "#000000",

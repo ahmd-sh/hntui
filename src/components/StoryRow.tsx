@@ -9,12 +9,13 @@ interface Props {
   item: Item
   selected: boolean
   saved?: boolean
+  visited?: boolean
   onSelect: () => void
   onActivate: () => void
   onContextMenu?: (ev: MouseEvent) => void
 }
 
-export function StoryRow({ rank, item, selected, saved, onSelect, onActivate, onContextMenu }: Props) {
+export function StoryRow({ rank, item, selected, saved, visited, onSelect, onActivate, onContextMenu }: Props) {
   const t = useTheme()
   const host = hostname(item.url)
   const title = item.title ?? "(untitled)"
@@ -23,8 +24,11 @@ export function StoryRow({ rank, item, selected, saved, onSelect, onActivate, on
   const age = relativeTime(item.time)
   const comments = item.descendants ?? 0
   const bg = selected ? t.rowHighlight : undefined
-  const titleFg = selected ? t.text : t.textBody
-  const rankFg = selected ? t.accent : t.textDim
+  const titleFg = visited ? t.textVisited : selected ? t.text : t.textBody
+  const rankFg = visited ? t.textVisited : selected ? t.accent : t.textDim
+  const voteFg = visited ? t.textVisited : t.accent
+  const dimFg = visited ? t.textVisited : t.textDim
+  const mutedFg = visited ? t.textVisited : t.textMuted
 
   let lastClick = 0
   const handleClick = (ev: MouseEvent) => {
@@ -57,15 +61,15 @@ export function StoryRow({ rank, item, selected, saved, onSelect, onActivate, on
         <span fg={titleFg} attributes={selected ? TextAttributes.BOLD : TextAttributes.NONE}>
           {title}
         </span>
-        {host ? <span fg={t.textDim}>{` (${host})`}</span> : null}
+        {host ? <span fg={dimFg}>{` (${host})`}</span> : null}
       </text>
       <text {...selectionColors(t)}>
         <span fg={t.textDim}>     </span>
-        <span fg={t.accent}>▲ {score}</span>
-        <span fg={t.textDim}>{`  by `}</span>
-        <span fg={t.textMuted}>{author}</span>
-        <span fg={t.textDim}>{`  ${age}  | `}</span>
-        <span fg={t.textMuted}>{`${comments} comment${comments === 1 ? "" : "s"}`}</span>
+        <span fg={voteFg}>▲ {score}</span>
+        <span fg={dimFg}>{`  by `}</span>
+        <span fg={mutedFg}>{author}</span>
+        <span fg={dimFg}>{`  ${age}  | `}</span>
+        <span fg={mutedFg}>{`${comments} comment${comments === 1 ? "" : "s"}`}</span>
       </text>
     </box>
   )

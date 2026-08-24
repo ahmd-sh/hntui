@@ -1,18 +1,22 @@
 import { Loader } from "./Loader"
+import type { Category } from "../api/types"
 import { selectionColors, useTheme } from "../theme"
 
 interface Props {
   view: "list" | "detail"
+  category?: Category
   loading?: boolean
   message?: string
 }
 
-export function StatusBar({ view, loading, message }: Props) {
+export function StatusBar({ view, category, loading, message }: Props) {
   const t = useTheme()
   const hints =
     view === "list"
-      ? "j/k move · c/⏎ open · s save · ? help · q quit"
-      : "j/k move · space collapse · ⏎ links · ? help · h/esc back"
+      ? category === "history"
+        ? "j/k move · c/⏎ open · x clear history · q quit"
+        : "j/k move · c/⏎ open · s save · q quit"
+      : "j/k move · space collapse · ⏎ links · h/esc back"
   return (
     <box
       flexDirection="row"
@@ -29,6 +33,8 @@ export function StatusBar({ view, loading, message }: Props) {
     >
       {loading ? <Loader /> : null}
       <text fg={t.statusHint} {...selectionColors(t)}>{message ?? hints}</text>
+      <box flexGrow={1} />
+      <text fg={t.statusHint} {...selectionColors(t)}>? help</text>
     </box>
   )
 }
