@@ -1,4 +1,5 @@
-import { Array as Arr, Cache, Data, Duration, Effect, Schedule } from "effect"
+import { Array as Arr, Cache, Data, Duration, Effect, Schedule, Schema } from "effect"
+import { ItemSchema } from "./types"
 import type { FeedCategory, Item } from "./types"
 
 const BASE = "https://hacker-news.firebaseio.com/v0"
@@ -22,7 +23,12 @@ export class HnTimeoutError extends Data.TaggedError("HnTimeoutError")<{
   readonly path: string
 }> {}
 
-export type HnError = HnRequestError | HnStatusError | HnTimeoutError
+export class HnDecodeError extends Data.TaggedError("HnDecodeError")<{
+  readonly path: string
+  readonly issue: string
+}> {}
+
+export type HnError = HnRequestError | HnStatusError | HnTimeoutError | HnDecodeError
 
 // ---------------------------------------------------------------------------
 // The one HTTP building block: GET a JSON document from the HN API.
@@ -56,6 +62,24 @@ const getJson = (path: string): Effect.Effect<unknown, HnError> =>
     }),
   )
 
+// GET + validate: the `unknown` from the wire only becomes an A by passing
+// through the schema. A payload that doesn't match fails with HnDecodeError.
+const getDecoded = <A, I>(
+  path: string,
+  schema: Schema.Schema<A, I, never>,
+): Effect.Effect<A, HnError> =>
+  getJson(path).pipe(
+    Effect.flatMap(Schema.decodeUnknown(schema)),
+    Effect.catchTag("ParseError", (e) =>
+      Effect.fail(new HnDecodeError({ path, issue: e.message })),
+    ),
+  )
+
+// HN returns `null` (with a 200) for deleted/nonexistent ids — the schemas
+// say so explicitly instead of a cast papering over it.
+const IdsPayload = Schema.NullOr(Schema.mutable(Schema.Array(Schema.Number)))
+const ItemPayload = Schema.NullOr(ItemSchema)
+
 // ---------------------------------------------------------------------------
 // Feed ids
 // ---------------------------------------------------------------------------
@@ -63,8 +87,8 @@ const getJson = (path: string): Effect.Effect<unknown, HnError> =>
 export const fetchIds = (
   category: FeedCategory,
 ): Effect.Effect<number[], HnError> =>
-  getJson(`${category}stories.json`).pipe(
-    Effect.map((ids) => (ids as number[] | null) ?? []),
+  getDecoded(`${category}stories.json`, IdsPayload).pipe(
+    Effect.map((ids) => ids ?? []),
   )
 
 // ---------------------------------------------------------------------------
@@ -77,16 +101,15 @@ const itemCache = Effect.runSync(
   Cache.make({
     capacity: 50_000,
     timeToLive: Duration.infinity,
-    lookup: (id: number) =>
-      getJson(`item/${id}.json`).pipe(Effect.map((raw) => raw as Item)),
+    lookup: (id: number) => getDecoded(`item/${id}.json`, ItemPayload),
   }),
 )
 
-export const fetchItem = (id: number): Effect.Effect<Item, HnError> =>
+export const fetchItem = (id: number): Effect.Effect<Item | null, HnError> =>
   itemCache.get(id).pipe(Effect.tapError(() => itemCache.invalidate(id)))
 
 // Replaces the hand-rolled worker pool: fetch many items, at most
-// `concurrency` in flight, failures dropped, input order preserved.
+// `concurrency` in flight, failures and null items dropped, order preserved.
 export const fetchItems = (
   ids: ReadonlyArray<number>,
   concurrency = 10,
@@ -94,7 +117,5 @@ export const fetchItems = (
   Effect.forEach(ids, (id) => fetchItem(id).pipe(Effect.option), {
     concurrency,
   }).pipe(
-    // getSomes drops the failures; filter(Boolean) drops null items —
-    // HN returns `null` with a 200 for deleted/nonexistent ids
-    Effect.map((opts) => Arr.getSomes(opts).filter((x): x is Item => Boolean(x))),
+    Effect.map((opts) => Arr.getSomes(opts).filter((x): x is Item => x !== null)),
   )

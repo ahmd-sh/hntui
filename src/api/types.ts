@@ -1,3 +1,5 @@
+import { Schema } from "effect"
+
 export type FeedCategory = "top" | "new" | "best" | "ask" | "show" | "job"
 export type Category = FeedCategory | "saved" | "history"
 
@@ -19,18 +21,20 @@ export const ALL_CATEGORIES: Category[] = [
 // Backwards-compat alias used in older imports
 export const CATEGORIES = FEED_CATEGORIES
 
-export interface Item {
-  id: number
-  type: "story" | "comment" | "job" | "poll" | "pollopt"
-  by?: string
-  time?: number
-  text?: string
-  dead?: boolean
-  deleted?: boolean
-  parent?: number
-  kids?: number[]
-  url?: string
-  score?: number
-  title?: string
-  descendants?: number
-}
+export const ItemSchema = Schema.Struct({
+  id: Schema.Number,
+  type: Schema.Literal("story", "comment", "job", "poll", "pollopt"),
+  by: Schema.optional(Schema.String),
+  time: Schema.optional(Schema.Number),
+  text: Schema.optional(Schema.String),
+  dead: Schema.optional(Schema.Boolean),
+  deleted: Schema.optional(Schema.Boolean),
+  parent: Schema.optional(Schema.Number),
+  kids: Schema.optional(Schema.mutable(Schema.Array(Schema.Number))),
+  url: Schema.optional(Schema.String),
+  score: Schema.optional(Schema.Number),
+  title: Schema.optional(Schema.String),
+  descendants: Schema.optional(Schema.Number),
+})
+
+export type Item = typeof ItemSchema.Type
