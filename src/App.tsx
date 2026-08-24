@@ -18,6 +18,7 @@ import { openUrl } from "./utils/openUrl"
 import { extractLinks, parseHnItemLink, type HnItemRef, type Link } from "./utils/format"
 import { resolveStory } from "./api/hn"
 import type { HnError, HnItemGone } from "./api/hn"
+import { AppRuntime } from "./runtime"
 import { hnErrorMessage } from "./utils/errors"
 import { LinksPopup } from "./components/LinksPopup"
 import { HelpOverlay } from "./components/HelpOverlay"
@@ -136,13 +137,13 @@ export function App() {
       .map((l) => parseHnItemLink(l.url))
       .filter((r): r is HnItemRef => r !== null)
     if (refs.length === 0) return
-    const fiber = Effect.runFork(
+    const fiber = AppRuntime.runFork(
       Effect.forEach(refs, (ref) => resolveStory(ref).pipe(Effect.ignore), {
         concurrency: 4,
       }),
     )
     return () => {
-      Effect.runFork(Fiber.interrupt(fiber))
+      AppRuntime.runFork(Fiber.interrupt(fiber))
     }
   }, [popupLinks])
 
@@ -186,7 +187,7 @@ export function App() {
 
   const cancelResolve = () => {
     if (resolveFiber.current) {
-      Effect.runFork(Fiber.interrupt(resolveFiber.current))
+      AppRuntime.runFork(Fiber.interrupt(resolveFiber.current))
       resolveFiber.current = null
     }
     setResolving(false)
@@ -243,7 +244,7 @@ export function App() {
   const startResolve = (ref: HnItemRef) => {
     cancelResolve()
     setResolving(true)
-    resolveFiber.current = Effect.runFork(
+    resolveFiber.current = AppRuntime.runFork(
       resolveStory(ref).pipe(
         Effect.match({
           onSuccess: (r) => {

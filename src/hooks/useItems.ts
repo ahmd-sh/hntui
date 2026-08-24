@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Effect, Fiber } from "effect"
+import { AppRuntime } from "../runtime"
 import { fetchItems } from "../api/hn"
 import type { Item } from "../api/types"
 
@@ -14,7 +15,7 @@ export function useItems(ids: number[]) {
     }
     setItems([])
     setLoading(true)
-    const fiber = Effect.runFork(
+    const fiber = AppRuntime.runFork(
       fetchItems(ids).pipe(
         Effect.andThen((data) =>
           Effect.sync(() => {
@@ -25,7 +26,7 @@ export function useItems(ids: number[]) {
       ),
     )
     return () => {
-      Effect.runFork(Fiber.interrupt(fiber))
+      AppRuntime.runFork(Fiber.interrupt(fiber))
     }
   }, [ids.join(",")])
 

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { Effect, Fiber } from "effect"
+import { AppRuntime } from "../runtime"
 import { fetchItem } from "../api/hn"
+import type { HnApi } from "../api/hn"
 import type { Item } from "../api/types"
 
 export interface CommentNode {
@@ -18,7 +20,7 @@ const loadTree = (
   id: number,
   depth: number,
   maxDepth: number,
-): Effect.Effect<CommentNode | null> =>
+): Effect.Effect<CommentNode | null, never, HnApi> =>
   Effect.gen(function* () {
     // a comment that fails to load is simply omitted, like before
     const item = yield* fetchItem(id).pipe(Effect.orElseSucceed(() => null))
@@ -51,7 +53,7 @@ export function useCommentTree(rootIds: number[] | undefined, maxDepth = 8, refr
   useEffect(() => {
     if (key === "") return
     const ids = key.slice(key.indexOf("|") + 1).split(",").map(Number)
-    const fiber = Effect.runFork(
+    const fiber = AppRuntime.runFork(
       Effect.forEach(ids, (id) => loadTree(id, 0, maxDepth), {
         concurrency: "unbounded",
       }).pipe(
@@ -64,7 +66,7 @@ export function useCommentTree(rootIds: number[] | undefined, maxDepth = 8, refr
     )
     return () => {
       // interrupts the ENTIRE tree of pending comment fetches at once
-      Effect.runFork(Fiber.interrupt(fiber))
+      AppRuntime.runFork(Fiber.interrupt(fiber))
     }
   }, [key, maxDepth])
 

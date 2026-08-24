@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Effect, Fiber } from "effect"
+import { AppRuntime } from "../runtime"
 import { fetchIds } from "../api/hn"
 import type { HnError } from "../api/hn"
 import type { FeedCategory } from "../api/types"
@@ -13,7 +14,7 @@ export function useStoryIds(category: FeedCategory, refreshKey = 0) {
     setIds([])
     setLoading(true)
     setError(null)
-    const fiber = Effect.runFork(
+    const fiber = AppRuntime.runFork(
       fetchIds(category).pipe(
         Effect.match({
           onSuccess: (data) => {
@@ -29,7 +30,7 @@ export function useStoryIds(category: FeedCategory, refreshKey = 0) {
     )
     return () => {
       // interrupting the fiber aborts the in-flight HTTP request
-      Effect.runFork(Fiber.interrupt(fiber))
+      AppRuntime.runFork(Fiber.interrupt(fiber))
     }
   }, [category, refreshKey])
 
