@@ -60,7 +60,7 @@ const getJson = (path: string): Effect.Effect<unknown, HnError> =>
 // Feed ids
 // ---------------------------------------------------------------------------
 
-export const fetchIdsEffect = (
+export const fetchIds = (
   category: FeedCategory,
 ): Effect.Effect<number[], HnError> =>
   getJson(`${category}stories.json`).pipe(
@@ -82,36 +82,19 @@ const itemCache = Effect.runSync(
   }),
 )
 
-export const fetchItemEffect = (id: number): Effect.Effect<Item, HnError> =>
+export const fetchItem = (id: number): Effect.Effect<Item, HnError> =>
   itemCache.get(id).pipe(Effect.tapError(() => itemCache.invalidate(id)))
 
 // Replaces the hand-rolled worker pool: fetch many items, at most
 // `concurrency` in flight, failures dropped, input order preserved.
-export const fetchItemsEffect = (
+export const fetchItems = (
   ids: ReadonlyArray<number>,
   concurrency = 10,
 ): Effect.Effect<Item[], never> =>
-  Effect.forEach(ids, (id) => fetchItemEffect(id).pipe(Effect.option), {
+  Effect.forEach(ids, (id) => fetchItem(id).pipe(Effect.option), {
     concurrency,
   }).pipe(
     // getSomes drops the failures; filter(Boolean) drops null items —
     // HN returns `null` with a 200 for deleted/nonexistent ids
     Effect.map((opts) => Arr.getSomes(opts).filter((x): x is Item => Boolean(x))),
   )
-
-// ---------------------------------------------------------------------------
-// Promise adapters — the hooks still speak Promise for now. These are the
-// only places we *run* effects; everything above merely describes them.
-// ---------------------------------------------------------------------------
-
-export function fetchIds(category: FeedCategory): Promise<number[]> {
-  return Effect.runPromise(fetchIdsEffect(category))
-}
-
-export function fetchItem(id: number): Promise<Item> {
-  return Effect.runPromise(fetchItemEffect(id))
-}
-
-export function fetchItems(ids: number[], concurrency = 10): Promise<Item[]> {
-  return Effect.runPromise(fetchItemsEffect(ids, concurrency))
-}

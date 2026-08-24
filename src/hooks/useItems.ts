@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Effect, Fiber } from "effect"
 import { fetchItems } from "../api/hn"
 import type { Item } from "../api/types"
 
@@ -11,17 +12,20 @@ export function useItems(ids: number[]) {
       setItems([])
       return
     }
-    let cancelled = false
     setItems([])
     setLoading(true)
-    fetchItems(ids).then((data) => {
-      if (!cancelled) {
-        setItems(data)
-        setLoading(false)
-      }
-    })
+    const fiber = Effect.runFork(
+      fetchItems(ids).pipe(
+        Effect.andThen((data) =>
+          Effect.sync(() => {
+            setItems(data)
+            setLoading(false)
+          }),
+        ),
+      ),
+    )
     return () => {
-      cancelled = true
+      Effect.runFork(Fiber.interrupt(fiber))
     }
   }, [ids.join(",")])
 
