@@ -15,10 +15,10 @@ jobs:
       fail-fast: false # one arch failing shouldn't cancel the others' builds
       matrix:
         include:
+          # no darwin-x64: GitHub's Intel macOS runner pool (macos-13) is
+          # effectively dead — Intel Mac users install via Bun instead
           - os: macos-14 # Apple Silicon
             suffix: darwin-arm64
-          - os: macos-13 # last x64 macOS runner; revisit when GitHub retires it
-            suffix: darwin-x64
           - os: ubuntu-latest
             suffix: linux-x64
           - os: ubuntu-24.04-arm
@@ -50,10 +50,13 @@ jobs:
           curl -sS -m 10 https://hacker-news.firebaseio.com/v0/topstories.json | head -c 60 || true
           echo
           export TERM=xterm-256color
-          (timeout 20 script -qefc "./dist/hntui-${{ matrix.suffix }}" /dev/null > boot.log 2>&1 || true)
-          grep -aqE "comments|Loading stories|load stories|HackerNews" boot.log || {
-            echo "=== smoke test failed — boot.log tail ==="
-            tail -c 4000 boot.log | cat -v
+          (timeout 25 script -qefc "stty rows 40 cols 120; ./dist/hntui-${{ matrix.suffix }}" /dev/null > boot.log 2>&1 || true)
+          # OpenTUI paints per-cell at narrow widths, so phrases only appear
+          # contiguously after stripping the ANSI positioning sequences
+          perl -pe 's/\e\[[0-9;?]*[a-zA-Z]//g; s/\e\][^\a\e]*(\a|\e\\)?//g; s/\e.//g' boot.log > boot.txt
+          grep -aqE "comments|Loading stories|load stories" boot.txt || {
+            echo "=== smoke test failed — stripped boot log tail ==="
+            tail -c 2000 boot.txt | cat -v
             exit 1
           }
 

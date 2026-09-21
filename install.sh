@@ -20,6 +20,12 @@ case "$arch" in
   *) echo "hntui: unsupported architecture: $arch" >&2; exit 1 ;;
 esac
 
+if [ "$os-$arch" = "darwin-x64" ]; then
+  echo "hntui: no prebuilt binary for Intel macOS (GitHub retired its Intel runners)." >&2
+  echo "install with Bun instead:  bun add -g @ahmd-sh/hntui" >&2
+  exit 1
+fi
+
 asset="hntui-$os-$arch.tar.gz"
 url="https://github.com/$REPO/releases/latest/download/$asset"
 

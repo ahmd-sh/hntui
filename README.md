@@ -30,7 +30,7 @@ The prebuilt binaries have no dependencies. Installing through npm (or hacking o
 curl -fsSL https://raw.githubusercontent.com/ahmd-sh/hntui/main/install.sh | sh
 ```
 
-Installs a self-contained binary to `~/.local/bin`. You can also grab a binary for your platform directly from the [releases page](https://github.com/ahmd-sh/hntui/releases).
+Installs a self-contained binary to `~/.local/bin`. You can also grab a binary for your platform directly from the [releases page](https://github.com/ahmd-sh/hntui/releases). Binaries cover macOS (Apple Silicon) and Linux (x64, arm64) — on an Intel Mac, use the Bun install below.
 
 ### With Bun
 
