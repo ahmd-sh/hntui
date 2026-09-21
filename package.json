@@ -1,5 +1,5 @@
 {
-  "name": "hntui",
+  "name": "@ahmd-sh/hntui",
   "version": "0.3.0",
   "description": "Beautiful Hacker News browser for the terminal, built on OpenTUI + React + Bun",
   "type": "module",

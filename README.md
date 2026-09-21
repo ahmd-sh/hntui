@@ -3,7 +3,7 @@
 Hacker News in your terminal! (formerly published as `@ahmd-sh/hackernuis`)
 
 ```
-bun add -g hntui
+curl -fsSL https://raw.githubusercontent.com/ahmd-sh/hntui/main/install.sh | sh
 hntui
 ```
 
@@ -18,24 +18,30 @@ hntui
 
 ## Requirements
 
-You need [Bun](https://bun.sh) 1.2 or newer. Install it with:
-
-```bash
-curl -fsSL https://bun.sh/install | bash
-```
-
 Any modern terminal with truecolor, mouse support, and UTF-8 will work. I've tested it in Ghostty on MacOS. Linux/Windows is supported by OpenTUI but I haven't tried it (yet).
+
+The prebuilt binaries have no dependencies. Installing through npm (or hacking on the code) needs [Bun](https://bun.sh) 1.2 or newer.
 
 ## Install
 
+### Standalone binary (recommended)
+
 ```bash
-bun add -g hntui
+curl -fsSL https://raw.githubusercontent.com/ahmd-sh/hntui/main/install.sh | sh
 ```
 
-Or run it once without installing:
+Installs a self-contained binary (runtime included, nothing else needed) to `~/.local/bin`. You can also grab a binary for your platform directly from the [releases page](https://github.com/ahmd-sh/hntui/releases).
+
+### With Bun
 
 ```bash
-bunx hntui
+bun add -g @ahmd-sh/hntui
+```
+
+Either way the command is `hntui`. Or run it once without installing:
+
+```bash
+bunx @ahmd-sh/hntui
 ```
 
 ## Run
@@ -142,14 +148,17 @@ Data comes from the public [Hacker News Firebase API](https://github.com/HackerN
 
 ## Releases
 
-This package publishes to npm via GitHub Actions using OIDC trusted publishing. Every release has a [SLSA provenance attestation](https://slsa.dev/) linking the tarball back to the exact commit and workflow run that produced it. To release a new version:
+Pushing a `v*` tag triggers two workflows:
+
+- `.github/workflows/release.yml` cross-compiles standalone binaries (`bun build --compile`) for macOS and Linux (arm64 and x64), smoke-tests the Linux build against the live API, and attaches the tarballs to a GitHub release. This is what `install.sh` downloads.
+- `.github/workflows/publish.yml` publishes `@ahmd-sh/hntui` to npm via OIDC trusted publishing, with a [SLSA provenance attestation](https://slsa.dev/) linking the tarball back to the exact commit and workflow run that produced it. It skips gracefully if the version is already on npm.
+
+To release a new version:
 
 ```bash
 npm version patch   # or minor / major
 git push --follow-tags
 ```
-
-The `v*` tag triggers `.github/workflows/publish.yml` which runs `npm publish --provenance --access public`.
 
 ## Acknowledgments
 

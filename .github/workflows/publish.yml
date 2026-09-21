@@ -40,5 +40,16 @@ jobs:
             exit 1
           fi
 
+      - name: Skip if this version is already on npm
+        id: check
+        run: |
+          NAME="$(node -p "require('./package.json').name")"
+          VERSION="$(node -p "require('./package.json').version")"
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "$NAME@$VERSION already published — skipping"
+          fi
+
       - name: Publish
+        if: steps.check.outputs.already != 'true'
         run: npm publish --provenance --access public --tag "${{ inputs.tag || 'latest' }}"

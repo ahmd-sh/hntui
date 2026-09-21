@@ -1,0 +1,54 @@
+name: Release binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  binaries:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Compile standalone binaries
+        run: |
+          mkdir -p dist
+          for target in bun-darwin-arm64 bun-darwin-x64 bun-linux-x64 bun-linux-arm64; do
+            suffix="${target#bun-}"
+            bun build --compile --minify --target="$target" ./src/index.tsx --outfile "dist/hntui-$suffix"
+          done
+
+      - name: Smoke test the Linux binary
+        # boots the real app in a pty and requires live story rows to render;
+        # fails the release if HN is unreachable — rerun the workflow if so
+        run: |
+          export TERM=xterm-256color
+          (timeout 20 script -qefc "./dist/hntui-linux-x64" /dev/null > boot.log 2>&1 || true)
+          grep -aq "comments" boot.log
+
+      - name: Package tarballs
+        run: |
+          cd dist
+          for f in hntui-*; do
+            cp "$f" hntui
+            tar -czf "$f.tar.gz" hntui
+            rm hntui
+          done
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          gh release create "$tag" dist/*.tar.gz --generate-notes ||
+            gh release upload "$tag" dist/*.tar.gz --clobber
