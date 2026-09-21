@@ -1,6 +1,6 @@
 # hntui
 
-Hacker News in your terminal! (formerly published as `@ahmd-sh/hackernuis`)
+Hacker News in your terminal!
 
 ```
 curl -fsSL https://raw.githubusercontent.com/ahmd-sh/hntui/main/install.sh | sh
@@ -30,7 +30,7 @@ The prebuilt binaries have no dependencies. Installing through npm (or hacking o
 curl -fsSL https://raw.githubusercontent.com/ahmd-sh/hntui/main/install.sh | sh
 ```
 
-Installs a self-contained binary (runtime included, nothing else needed) to `~/.local/bin`. You can also grab a binary for your platform directly from the [releases page](https://github.com/ahmd-sh/hntui/releases).
+Installs a self-contained binary to `~/.local/bin`. You can also grab a binary for your platform directly from the [releases page](https://github.com/ahmd-sh/hntui/releases).
 
 ### With Bun
 
