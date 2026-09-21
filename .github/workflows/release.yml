@@ -4,12 +4,25 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch: {}
 
+# OpenTUI loads a per-platform native package (@opentui/core-<platform>-<arch>)
+# that only installs on its own platform, so cross-compiling from one runner
+# can't resolve the other targets. Each binary builds on its native runner.
 jobs:
-  binaries:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14 # Apple Silicon
+            suffix: darwin-arm64
+          - os: macos-13 # last x64 macOS runner; revisit when GitHub retires it
+            suffix: darwin-x64
+          - os: ubuntu-latest
+            suffix: linux-x64
+          - os: ubuntu-24.04-arm
+            suffix: linux-arm64
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,35 +33,59 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Compile standalone binaries
+      - name: Compile standalone binary
         run: |
           mkdir -p dist
-          for target in bun-darwin-arm64 bun-darwin-x64 bun-linux-x64 bun-linux-arm64; do
-            suffix="${target#bun-}"
-            bun build --compile --minify --target="$target" ./src/index.tsx --outfile "dist/hntui-$suffix"
-          done
+          bun build --compile --minify ./src/index.tsx --outfile "dist/hntui-${{ matrix.suffix }}"
 
-      - name: Smoke test the Linux binary
-        # boots the real app in a pty and requires live story rows to render;
-        # fails the release if HN is unreachable — rerun the workflow if so
+      - name: Smoke test (Linux — boot in a pty, require live story rows)
+        if: runner.os == 'Linux'
         run: |
           export TERM=xterm-256color
-          (timeout 20 script -qefc "./dist/hntui-linux-x64" /dev/null > boot.log 2>&1 || true)
+          (timeout 20 script -qefc "./dist/hntui-${{ matrix.suffix }}" /dev/null > boot.log 2>&1 || true)
           grep -aq "comments" boot.log
 
-      - name: Package tarballs
+      - name: Smoke test (macOS — binary sanity)
+        if: runner.os == 'macOS'
+        run: |
+          file "dist/hntui-${{ matrix.suffix }}" | grep -q "Mach-O"
+          test "$(stat -f%z "dist/hntui-${{ matrix.suffix }}")" -gt 30000000
+
+      - name: Package tarball
         run: |
           cd dist
-          for f in hntui-*; do
-            cp "$f" hntui
-            tar -czf "$f.tar.gz" hntui
-            rm hntui
-          done
+          cp "hntui-${{ matrix.suffix }}" hntui
+          tar -czf "hntui-${{ matrix.suffix }}.tar.gz" hntui
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hntui-${{ matrix.suffix }}
+          path: dist/hntui-${{ matrix.suffix }}.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="${GITHUB_REF#refs/tags/}"
+          if [ "${GITHUB_REF#refs/tags/}" != "$GITHUB_REF" ]; then
+            tag="${GITHUB_REF#refs/tags/}"
+          else
+            tag="v$(node -p "require('./package.json').version")"
+          fi
           gh release create "$tag" dist/*.tar.gz --generate-notes ||
             gh release upload "$tag" dist/*.tar.gz --clobber
