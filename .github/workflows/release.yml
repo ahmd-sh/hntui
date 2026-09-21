@@ -12,6 +12,7 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false # one arch failing shouldn't cancel the others' builds
       matrix:
         include:
           - os: macos-14 # Apple Silicon
@@ -43,7 +44,11 @@ jobs:
         run: |
           export TERM=xterm-256color
           (timeout 20 script -qefc "./dist/hntui-${{ matrix.suffix }}" /dev/null > boot.log 2>&1 || true)
-          grep -aq "comments" boot.log
+          grep -aq "comments" boot.log || {
+            echo "=== smoke test failed — boot.log tail ==="
+            tail -c 4000 boot.log | cat -v
+            exit 1
+          }
 
       - name: Smoke test (macOS — binary sanity)
         if: runner.os == 'macOS'
