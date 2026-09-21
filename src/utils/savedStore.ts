@@ -1,14 +1,13 @@
-import { homedir } from "os"
 import { join } from "path"
 import { mkdirSync } from "fs"
+import { configDir } from "./configDir"
 
 export interface SavedEntry {
   id: number
   savedAt: number
 }
 
-const CONFIG_DIR = join(homedir(), ".config", "hackernuis")
-const SAVED_PATH = join(CONFIG_DIR, "saved.json")
+const SAVED_PATH = join(configDir(), "saved.json")
 
 export async function loadSaved(): Promise<SavedEntry[]> {
   try {
@@ -27,7 +26,7 @@ export async function loadSaved(): Promise<SavedEntry[]> {
 
 export async function persistSaved(entries: SavedEntry[]): Promise<void> {
   try {
-    mkdirSync(CONFIG_DIR, { recursive: true })
+    mkdirSync(configDir(), { recursive: true })
     await Bun.write(SAVED_PATH, JSON.stringify(entries, null, 2))
   } catch {
     // fail silently — saved state is best-effort

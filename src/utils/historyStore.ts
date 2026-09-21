@@ -1,6 +1,6 @@
-import { homedir } from "os"
 import { join } from "path"
 import { mkdirSync } from "fs"
+import { configDir } from "./configDir"
 
 export interface HistoryEntry {
   id: number
@@ -9,8 +9,7 @@ export interface HistoryEntry {
 
 export const HISTORY_CAP = 1000
 
-const CONFIG_DIR = join(homedir(), ".config", "hackernuis")
-const HISTORY_PATH = join(CONFIG_DIR, "history.json")
+const HISTORY_PATH = join(configDir(), "history.json")
 
 export async function loadHistory(): Promise<HistoryEntry[]> {
   try {
@@ -31,7 +30,7 @@ export async function loadHistory(): Promise<HistoryEntry[]> {
 
 export async function persistHistory(entries: HistoryEntry[]): Promise<void> {
   try {
-    mkdirSync(CONFIG_DIR, { recursive: true })
+    mkdirSync(configDir(), { recursive: true })
     await Bun.write(HISTORY_PATH, JSON.stringify(entries, null, 2))
   } catch {
     // fail silently — view history is best-effort

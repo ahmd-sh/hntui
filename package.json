@@ -1,11 +1,11 @@
 {
-  "name": "@ahmd-sh/hackernuis",
-  "version": "0.2.0",
+  "name": "hntui",
+  "version": "0.3.0",
   "description": "Beautiful Hacker News browser for the terminal, built on OpenTUI + React + Bun",
   "type": "module",
   "module": "src/index.tsx",
   "bin": {
-    "hackernuis": "./src/index.tsx"
+    "hntui": "./src/index.tsx"
   },
   "files": [
     "src",
@@ -19,17 +19,18 @@
     "terminal",
     "cli",
     "opentui",
-    "bun"
+    "bun",
+    "hackernuis"
   ],
   "author": "Ahmed Shaikh <ahmeds@mun.ca>",
   "license": "MIT",
-  "homepage": "https://github.com/ahmd-sh/hackernuis#readme",
+  "homepage": "https://github.com/ahmd-sh/hntui#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ahmd-sh/hackernuis.git"
+    "url": "git+https://github.com/ahmd-sh/hntui.git"
   },
   "bugs": {
-    "url": "https://github.com/ahmd-sh/hackernuis/issues"
+    "url": "https://github.com/ahmd-sh/hntui/issues"
   },
   "publishConfig": {
     "access": "public"

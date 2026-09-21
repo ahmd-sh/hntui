@@ -1,10 +1,10 @@
-# Hackernuis
+# hntui
 
-Hacker News in your terminal!
+Hacker News in your terminal! (formerly published as `@ahmd-sh/hackernuis`)
 
 ```
-bun add -g @ahmd-sh/hackernuis
-hackernuis
+bun add -g hntui
+hntui
 ```
 
 ## What it does
@@ -29,19 +29,19 @@ Any modern terminal with truecolor, mouse support, and UTF-8 will work. I've tes
 ## Install
 
 ```bash
-bun add -g @ahmd-sh/hackernuis
+bun add -g hntui
 ```
 
 Or run it once without installing:
 
 ```bash
-bunx @ahmd-sh/hackernuis
+bunx hntui
 ```
 
 ## Run
 
 ```bash
-hackernuis
+hntui
 ```
 
 Press `q` (or `Ctrl-C`) to quit.
@@ -125,15 +125,15 @@ Press `t` to toggle. The dark theme is mostly black with orange accents. The lig
 
 ## Saved posts
 
-Press `s` on any story to save it. Saved posts get a small star next to the title and show up in the Saved tab on the right side of the tab strip. The list persists across sessions in `~/.config/hackernuis/saved.json` as a small JSON file. Press `s` again to remove a post from the list.
+Press `s` on any story to save it. Saved posts get a small star next to the title and show up in the Saved tab on the right side of the tab strip. The list persists across sessions in `~/.config/hntui/saved.json` as a small JSON file. (Config from the app's `hackernuis` days is migrated automatically on first run.) Press `s` again to remove a post from the list.
 
 `Shift-S` jumps straight to the Saved list from anywhere.
 
 ## Development
 
 ```bash
-git clone https://github.com/ahmd-sh/hackernuis.git
-cd hackernuis
+git clone https://github.com/ahmd-sh/hntui.git
+cd hntui
 bun install
 bun dev    # hot reload
 ```
