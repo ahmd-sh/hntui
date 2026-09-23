@@ -12,6 +12,7 @@ import { useItems } from "./hooks/useItems"
 import { flattenTree, useCommentTree } from "./hooks/useCommentTree"
 import { useSaved } from "./hooks/useSaved"
 import { useHistory } from "./hooks/useHistory"
+import { useUpdateCheck } from "./hooks/useUpdateCheck"
 import { ALL_CATEGORIES, FEED_CATEGORIES } from "./api/types"
 import type { Category, FeedCategory, Item } from "./api/types"
 import { openUrl } from "./utils/openUrl"
@@ -50,6 +51,7 @@ export function App() {
   const { items: feedItems, loading: feedItemsLoading } = useItems(visibleIds)
   const { entries: savedEntries, idSet: savedIds, isSaved, toggle: toggleSave } = useSaved()
   const { entries: historyEntries, idSet: viewedIds, markViewed, clear: clearHistory } = useHistory()
+  const updateAvailable = useUpdateCheck()
 
   const savedIdList = useMemo(() => savedEntries.map((e) => e.id), [savedEntries])
   const { items: savedItemsRaw, loading: savedLoading } = useItems(
@@ -584,6 +586,7 @@ export function App() {
           view={view.kind === "detail" ? "detail" : "list"}
           category={category}
           loading={statusLoading}
+          updateAvailable={updateAvailable}
           message={
             view.kind === "resolveError"
               ? view.error._tag === "HnItemGone"

@@ -56,6 +56,14 @@ hntui
 
 Press `q` (or `Ctrl-C`) to quit.
 
+## Updating
+
+```bash
+hntui update
+```
+
+Checks the latest release and, for binary installs, replaces itself in place. Bun installs update with `bun add -g @ahmd-sh/hntui` instead (`hntui update` will tell you so). When a newer release exists, the status bar shows a quiet hint. `hntui --version` prints the installed version.
+
 ## Keybindings
 
 ### Story list

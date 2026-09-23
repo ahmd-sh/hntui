@@ -7,9 +7,10 @@ interface Props {
   category?: Category
   loading?: boolean
   message?: string
+  updateAvailable?: string | null
 }
 
-export function StatusBar({ view, category, loading, message }: Props) {
+export function StatusBar({ view, category, loading, message, updateAvailable }: Props) {
   const t = useTheme()
   const hints =
     view === "list"
@@ -34,6 +35,9 @@ export function StatusBar({ view, category, loading, message }: Props) {
       {loading ? <Loader /> : null}
       <text fg={t.statusHint} {...selectionColors(t)}>{message ?? hints}</text>
       <box flexGrow={1} />
+      {updateAvailable ? (
+        <text fg={t.textDim} {...selectionColors(t)}>{`v${updateAvailable} · hntui update`}</text>
+      ) : null}
       <text fg={t.statusHint} {...selectionColors(t)}>? help</text>
     </box>
   )

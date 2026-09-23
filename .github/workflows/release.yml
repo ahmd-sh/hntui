@@ -46,6 +46,7 @@ jobs:
         # reachability from this runner — live data may not load here, so any
         # rendered chrome (stories, loading, or error screen) passes.
         run: |
+          "./dist/hntui-${{ matrix.suffix }}" --version | grep -qE "^hntui [0-9]"
           echo "--- HN API reachability from this runner (informational):"
           curl -sS -m 10 https://hacker-news.firebaseio.com/v0/topstories.json | head -c 60 || true
           echo
@@ -60,11 +61,14 @@ jobs:
             exit 1
           }
 
-      - name: Smoke test (macOS — binary sanity)
+      - name: Smoke test (macOS — signature and boot)
         if: runner.os == 'macOS'
+        # bun 1.3.13 shipped a --compile regression producing invalid
+        # signatures that macOS SIGKILLs at exec — verify both explicitly
         run: |
           file "dist/hntui-${{ matrix.suffix }}" | grep -q "Mach-O"
-          test "$(stat -f%z "dist/hntui-${{ matrix.suffix }}")" -gt 30000000
+          codesign --verify "dist/hntui-${{ matrix.suffix }}"
+          "./dist/hntui-${{ matrix.suffix }}" --version | grep -qE "^hntui [0-9]"
 
       - name: Package tarball
         run: |
