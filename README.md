@@ -3,7 +3,7 @@
 <p align="center">A sleek and elegant tui for browsing one of the best tech news sources.</p>
 
 <p align="center">
-  <img src=".github/assets/hntui-showcase.jpg" alt="hntui — Hacker News in your terminal" width="800">
+  <img src=".github/assets/hntui-showcase.webp" alt="hntui — Hacker News in your terminal" width="800">
 </p>
 
 ```
