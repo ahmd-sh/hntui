@@ -1,6 +1,10 @@
-# hntui
+<h1 align="center">hntui: Hacker News in your terminal!</h1>
 
-Hacker News in your terminal!
+<p align="center">A sleek and elegant tui for browsing one of the best tech news sources.</p>
+
+<p align="center">
+  <img src=".github/assets/hntui-showcase.jpg" alt="hntui — Hacker News in your terminal" width="800">
+</p>
 
 ```
 curl -fsSL https://raw.githubusercontent.com/ahmd-sh/hntui/main/install.sh | sh
@@ -38,7 +42,7 @@ Installs a self-contained binary to `~/.local/bin`. You can also grab a binary f
 bun add -g @ahmd-sh/hntui
 ```
 
-Either way the command is `hntui`. Or run it once without installing:
+Or run it once without installing:
 
 ```bash
 bunx @ahmd-sh/hntui
@@ -59,13 +63,13 @@ Press `q` (or `Ctrl-C`) to quit.
 | Key | Action |
 |---|---|
 | `j` / `↓`, `k` / `↑` | Move cursor |
-| `gg`, `Shift-G` | Jump to first or last |
+| `gg`, `G` | Jump to first or last |
 | `Ctrl-D`, `Ctrl-U`, `PgDown`, `PgUp` | Scroll a half page |
 | `c`, `Enter` | Open the story and read its comments |
 | `h` / `←`, `l` / `→` | Previous or next tab |
 | `Tab`, `Shift-Tab` | Cycle through tabs |
 | `1` through `6` | Jump to a specific category |
-| `Shift-S` | Jump to the Saved list |
+| `S` | Jump to the Saved list |
 | `s` | Save or unsave the highlighted post |
 | `o` | Open the story's URL in your browser |
 | `r` | Refresh the current feed |
@@ -77,7 +81,7 @@ Press `q` (or `Ctrl-C`) to quit.
 | Key | Action |
 |---|---|
 | `j` / `↓`, `k` / `↑` | Move the comment cursor |
-| `gg`, `Shift-G` | Jump to first or last comment |
+| `gg`, `G` | Jump to first or last comment |
 | `Ctrl-D`, `Ctrl-U`, `PgDown`, `PgUp` | Scroll a half page |
 | `Space` | Collapse or expand the current subtree |
 | `Enter` | Open the links popup for the current comment |
@@ -92,7 +96,7 @@ Press `q` (or `Ctrl-C`) to quit.
 | Key | Action |
 |---|---|
 | `j`, `k`, `↑`, `↓` | Move |
-| `gg`, `Shift-G` | First or last link |
+| `gg`, `G` | First or last link |
 | `o`, `Enter` | Open the highlighted link |
 | `Esc`, `Backspace` | Close the popup |
 
@@ -133,7 +137,7 @@ Press `t` to toggle. The dark theme is mostly black with orange accents. The lig
 
 Press `s` on any story to save it. Saved posts get a small star next to the title and show up in the Saved tab on the right side of the tab strip. The list persists across sessions in `~/.config/hntui/saved.json` as a small JSON file. (Config from the app's `hackernuis` days is migrated automatically on first run.) Press `s` again to remove a post from the list.
 
-`Shift-S` jumps straight to the Saved list from anywhere.
+`S` jumps straight to the Saved list from anywhere.
 
 ## Development
 
@@ -164,6 +168,7 @@ git push --follow-tags
 
 - [OpenTUI](https://github.com/anomalyco/opentui) by Anomaly. The native TUI core that makes all of this possible.
 - [opentui-spinner](https://github.com/msmps/opentui-spinner) by Matt Simpson. The Knight Rider loading scanner is adapted from `examples/knight-rider/utils.ts` (MIT).
+- [Effect](https://effect.website) for empowering the data layer under the hood.
 - [Hacker News](https://news.ycombinator.com) for the content and the open API.
 
 ## License
