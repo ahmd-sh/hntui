@@ -1,6 +1,6 @@
 {
   "name": "@ahmd-sh/hntui",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Beautiful Hacker News browser for the terminal, built on OpenTUI + React + Bun",
   "type": "module",
   "module": "src/index.tsx",
