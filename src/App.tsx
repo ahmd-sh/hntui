@@ -20,6 +20,7 @@ import { resolveStory } from "./api/hn"
 import type { HnError, HnItemGone } from "./api/hn"
 import { AppRuntime } from "./runtime"
 import { hnErrorMessage } from "./utils/errors"
+import { startThemeWipe } from "./utils/themeWipe"
 import { LinksPopup } from "./components/LinksPopup"
 import { HelpOverlay } from "./components/HelpOverlay"
 import { ContextMenu, type MenuItem } from "./components/ContextMenu"
@@ -360,7 +361,10 @@ export function App() {
     }
 
     if (name === "t") {
-      setTheme((cur) => (cur.name === "dark" ? lightTheme : darkTheme))
+      const next = theme.name === "dark" ? lightTheme : darkTheme
+      // snapshot the old-theme frame BEFORE React re-renders in the new theme
+      if (renderer) startThemeWipe(renderer, String(next.accent))
+      setTheme(next)
       return
     }
 
