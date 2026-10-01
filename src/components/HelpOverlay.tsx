@@ -49,6 +49,8 @@ const DETAIL_GROUPS: Group[] = [
     title: "Actions",
     bindings: [
       { keys: "space", desc: "collapse / expand" },
+      { keys: "J / K", desc: "next / previous thread" },
+      { keys: "c", desc: "fold / unfold current thread" },
       { keys: "⏎", desc: "comment links (HN posts open in-app)" },
       { keys: "o", desc: "open post link in browser" },
       { keys: "y", desc: "open HN page in browser" },

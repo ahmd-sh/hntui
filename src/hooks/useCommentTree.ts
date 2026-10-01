@@ -88,6 +88,23 @@ export function flattenTree(tree: CommentNode[], collapsed: Set<number>): FlatCo
   return out
 }
 
+// index of the top-level comment whose thread contains flat[from], or -1
+export function rootIndexOf(flat: FlatComment[], from: number): number {
+  for (let i = Math.min(from, flat.length - 1); i >= 0; i--) {
+    if (flat[i]!.depth === 0) return i
+  }
+  return -1
+}
+
+// index of the next (dir 1) or previous (dir -1) top-level comment, or -1.
+// Going backward from a nested comment lands on its own thread's root first.
+export function nextRootIndex(flat: FlatComment[], from: number, dir: 1 | -1): number {
+  for (let i = from + dir; i >= 0 && i < flat.length; i += dir) {
+    if (flat[i]!.depth === 0) return i
+  }
+  return -1
+}
+
 function countAll(node: CommentNode): number {
   let n = node.children.length
   for (const c of node.children) n += countAll(c)

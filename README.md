@@ -66,55 +66,7 @@ Checks the latest release and, for binary installs, replaces itself in place. Bu
 
 ## Keybindings
 
-### Story list
-
-| Key | Action |
-|---|---|
-| `j` / `↓`, `k` / `↑` | Move cursor |
-| `gg`, `G` | Jump to first or last |
-| `Ctrl-D`, `Ctrl-U`, `PgDown`, `PgUp` | Scroll a half page |
-| `c`, `Enter` | Open the story and read its comments |
-| `h` / `←`, `l` / `→` | Previous or next tab |
-| `Tab`, `Shift-Tab` | Cycle through tabs |
-| `1` through `6` | Jump to a specific category |
-| `S` | Jump to the Saved list |
-| `s` | Save or unsave the highlighted post |
-| `o` | Open the story's URL in your browser |
-| `r` | Refresh the current feed |
-| `t` | Toggle theme |
-| `q`, `Ctrl-C` | Quit |
-
-### Story detail (comments)
-
-| Key | Action |
-|---|---|
-| `j` / `↓`, `k` / `↑` | Move the comment cursor |
-| `gg`, `G` | Jump to first or last comment |
-| `Ctrl-D`, `Ctrl-U`, `PgDown`, `PgUp` | Scroll a half page |
-| `Space` | Collapse or expand the current subtree |
-| `Enter` | Open the links popup for the current comment |
-| `s` | Save or unsave this story |
-| `o` | Open the story's URL |
-| `Esc`, `Backspace`, `h` / `←` | Back to the list |
-| `t` | Toggle theme |
-| `q` | Quit |
-
-### Links popup
-
-| Key | Action |
-|---|---|
-| `j`, `k`, `↑`, `↓` | Move |
-| `gg`, `G` | First or last link |
-| `o`, `Enter` | Open the highlighted link |
-| `Esc`, `Backspace` | Close the popup |
-
-### Context menu (right-click)
-
-| Key | Action |
-|---|---|
-| `j` / `↓`, `k` / `↑` | Move |
-| `Enter` | Activate |
-| `Esc`, `Backspace` | Close |
+hntui speaks vim: `j`/`k` to move, `gg`/`G` to jump, `Ctrl-D`/`Ctrl-U` to scroll, `J`/`K` to hop between top-level comment threads, `c` to fold the thread you're reading, `Esc`/`h` to go back. Press `?` in any view for the full list of shortcuts on that page.
 
 ### Mouse
 

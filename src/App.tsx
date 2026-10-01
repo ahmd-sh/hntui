@@ -9,7 +9,7 @@ import { StoryDetailView } from "./views/StoryDetailView"
 import { MessageView } from "./views/MessageView"
 import { useStoryIds } from "./hooks/useStoryIds"
 import { useItems } from "./hooks/useItems"
-import { flattenTree, useCommentTree } from "./hooks/useCommentTree"
+import { flattenTree, nextRootIndex, rootIndexOf, useCommentTree } from "./hooks/useCommentTree"
 import { useSaved } from "./hooks/useSaved"
 import { useHistory } from "./hooks/useHistory"
 import { useUpdateCheck } from "./hooks/useUpdateCheck"
@@ -443,7 +443,13 @@ export function App() {
     } else {
       const max = flat.length - 1
       const pg = pageSize("detail")
-      if (name === "j" || name === "down") {
+      if (name === "j" && ev.shift) {
+        const idx = nextRootIndex(flat, detailCursor, 1)
+        if (idx >= 0) setDetailCursor(idx)
+      } else if (name === "k" && ev.shift) {
+        const idx = nextRootIndex(flat, detailCursor, -1)
+        if (idx >= 0) setDetailCursor(idx)
+      } else if (name === "j" || name === "down") {
         setDetailCursor((c) => Math.min(max, c + 1))
       } else if (name === "k" || name === "up") {
         setDetailCursor((c) => Math.max(0, c - 1))
@@ -460,6 +466,13 @@ export function App() {
       } else if (name === "space") {
         const cur = flat[detailCursor]
         if (cur) toggleCollapse(cur.node.item.id)
+      } else if (name === "c") {
+        // fold/unfold the whole thread you're in, landing on its root
+        const rootIdx = rootIndexOf(flat, detailCursor)
+        if (rootIdx >= 0) {
+          toggleCollapse(flat[rootIdx]!.node.item.id)
+          setDetailCursor(rootIdx)
+        }
       } else if (name === "return" || name === "enter") {
         const cur = flat[detailCursor]
         if (cur) openLinksFor(cur.node.item.id)
