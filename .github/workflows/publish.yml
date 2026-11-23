@@ -1,25 +1,46 @@
 name: Publish to npm
 
+# Runs after "Release binaries" finishes for a tag, and repackages that
+# release's own tarballs for npm, so npm and GitHub ship the same bytes.
+#
+# First publish of a new platform package: npm can only trust a workflow for
+# a package that already exists. The first time a package name appears
+# (e.g. @ahmd-sh/hntui-darwin-x64), publish it once by hand (npm/build.sh,
+# then `npm publish --access public` in its npm/out/ folder), then add this
+# workflow as its trusted publisher on npmjs.com.
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_run:
+    workflows: ["Release binaries"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Optional dist-tag (default: latest)"
+        description: "Release tag to publish, e.g. v0.6.0"
+        required: true
+      dist_tag:
+        description: "npm dist-tag"
         required: false
         default: "latest"
 
 jobs:
   publish:
+    # a tag's release that succeeded, or a manual run
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v'))
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
+    env:
+      # for a tag-triggered run, head_branch is the tag
+      TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+      DIST_TAG: ${{ inputs.dist_tag || 'latest' }}
     steps:
-      - name: Checkout
+      - name: Checkout the tag
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -30,26 +51,27 @@ jobs:
       - name: Upgrade npm (need >= 11.5.1 for trusted publishing)
         run: npm install -g npm@latest && npm --version
 
-      - name: Verify package.json version matches tag
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Version matches the tag
         run: |
-          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-          PKG_VERSION="$(node -p "require('./package.json').version")"
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "Tag $TAG_VERSION does not match package.json $PKG_VERSION"
-            exit 1
-          fi
+          have="$(grep -m1 '^version' Cargo.toml | cut -d '"' -f2)"
+          [ "${TAG#v}" = "$have" ] || { echo "tag $TAG, Cargo.toml $have"; exit 1; }
 
-      - name: Skip if this version is already on npm
-        id: check
+      - name: Download the release's binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "$TAG" --pattern 'hntui-*.tar.gz' --dir dist
+
+      - name: Build the npm packages
+        run: sh npm/build.sh "${TAG#v}" dist
+
+      - name: Publish (platform packages first, then the launcher)
         run: |
-          NAME="$(node -p "require('./package.json').name")"
-          VERSION="$(node -p "require('./package.json').version")"
-          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
-            echo "already=true" >> "$GITHUB_OUTPUT"
-            echo "$NAME@$VERSION already published — skipping"
-          fi
-
-      - name: Publish
-        if: steps.check.outputs.already != 'true'
-        run: npm publish --provenance --access public --tag "${{ inputs.tag || 'latest' }}"
+          version="${TAG#v}"
+          for dir in npm/out/hntui-* npm/out/hntui; do
+            name=$(node -p "require('./$dir/package.json').name")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version is already on npm, skipping"
+              continue
+            fi
+            (cd "$dir" && npm publish --provenance --access public --tag "$DIST_TAG")
+          done

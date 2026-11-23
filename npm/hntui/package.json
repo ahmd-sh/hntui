@@ -1,0 +1,39 @@
+{
+  "name": "@ahmd-sh/hntui",
+  "version": "0.0.0",
+  "description": "Beautiful Hacker News browser for the terminal",
+  "bin": {
+    "hntui": "bin/hntui"
+  },
+  "files": [
+    "bin",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": [
+    "hackernews",
+    "hn",
+    "tui",
+    "terminal",
+    "cli",
+    "hackernuis"
+  ],
+  "author": "Ahmed Shaikh <ahmeds@mun.ca>",
+  "license": "MIT",
+  "homepage": "https://github.com/ahmd-sh/hntui#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahmd-sh/hntui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ahmd-sh/hntui/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "optionalDependencies": {}
+}

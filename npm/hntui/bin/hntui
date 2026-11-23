@@ -1,0 +1,33 @@
+#!/bin/sh
+# npm launcher: runs the native hntui binary for this machine, which npm (or
+# bun, pnpm) installed next to this package as the optional dependency
+# @ahmd-sh/hntui-<os>-<arch>. Plain sh so it needs no Node or Bun to run.
+case "$(uname -s)-$(uname -m)" in
+  Darwin-arm64) p=darwin-arm64 ;;
+  Darwin-x86_64) p=darwin-x64 ;;
+  Linux-x86_64 | Linux-amd64) p=linux-x64 ;;
+  Linux-aarch64 | Linux-arm64) p=linux-arm64 ;;
+  *) echo "hntui: no build for $(uname -s) $(uname -m)" >&2; exit 1 ;;
+esac
+
+# where this script really lives (package managers link it into a bin dir)
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case $link in
+    /*) self=$link ;;
+    *) self=$(dirname "$self")/$link ;;
+  esac
+done
+pkg=$(cd "$(dirname "$self")/.." && pwd -P) # .../node_modules/@ahmd-sh/hntui
+
+# nested (npm global installs) or hoisted next to us (bun, pnpm, local npm)
+for bin in "$pkg/node_modules/@ahmd-sh/hntui-$p/bin/hntui" "$pkg/../hntui-$p/bin/hntui"; do
+  if [ -f "$bin" ]; then
+    [ -x "$bin" ] || chmod +x "$bin" 2>/dev/null
+    exec "$bin" "$@"
+  fi
+done
+echo "hntui: the binary package @ahmd-sh/hntui-$p is missing." >&2
+echo "Reinstall with: npm install -g @ahmd-sh/hntui" >&2
+exit 1

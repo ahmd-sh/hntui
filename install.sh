@@ -1,11 +1,13 @@
 #!/bin/sh
 # hntui installer: downloads the standalone binary for this platform from the
-# latest GitHub release. No dependencies — the binary embeds its runtime.
+# latest GitHub release (or HNTUI_VERSION's). No dependencies.
 #   curl -fsSL https://raw.githubusercontent.com/ahmd-sh/hntui/main/install.sh | sh
+#   curl -fsSL .../install.sh | HNTUI_VERSION=0.6.0 sh
 set -e
 
 REPO="ahmd-sh/hntui"
 INSTALL_DIR="${HNTUI_INSTALL_DIR:-$HOME/.local/bin}"
+VERSION="${HNTUI_VERSION#v}"
 
 os=$(uname -s)
 arch=$(uname -m)
@@ -20,20 +22,22 @@ case "$arch" in
   *) echo "hntui: unsupported architecture: $arch" >&2; exit 1 ;;
 esac
 
-if [ "$os-$arch" = "darwin-x64" ]; then
-  echo "hntui: no prebuilt binary for Intel macOS (GitHub retired its Intel runners)." >&2
-  echo "install with Bun instead:  bun add -g @ahmd-sh/hntui" >&2
-  exit 1
-fi
-
 asset="hntui-$os-$arch.tar.gz"
-url="https://github.com/$REPO/releases/latest/download/$asset"
+if [ -n "$VERSION" ]; then
+  url="https://github.com/$REPO/releases/download/v$VERSION/$asset"
+else
+  url="https://github.com/$REPO/releases/latest/download/$asset"
+fi
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-echo "downloading $asset ..."
-curl -fsSL "$url" -o "$tmp/$asset"
+echo "downloading $asset${VERSION:+ (v$VERSION)} ..."
+if ! curl -fsSL "$url" -o "$tmp/$asset"; then
+  echo "hntui: download failed: $url" >&2
+  [ -n "$VERSION" ] && echo "is v$VERSION a release with a $os-$arch binary? see https://github.com/$REPO/releases" >&2
+  exit 1
+fi
 tar -xzf "$tmp/$asset" -C "$tmp"
 
 mkdir -p "$INSTALL_DIR"

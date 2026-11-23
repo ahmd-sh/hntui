@@ -22,9 +22,9 @@ hntui
 
 ## Requirements
 
-Any modern terminal with truecolor, mouse support, and UTF-8 will work. I've tested it in Ghostty on MacOS. Linux/Windows is supported by OpenTUI but I haven't tried it (yet).
+Any modern terminal with truecolor and UTF-8 will work. I've tested it in Ghostty on MacOS.
 
-The prebuilt binaries have no dependencies. Installing through npm (or hacking on the code) needs [Bun](https://bun.sh) 1.2 or newer.
+hntui is a single native binary with no dependencies: no runtime to install, whichever way you install it.
 
 ## Install
 
@@ -34,19 +34,29 @@ The prebuilt binaries have no dependencies. Installing through npm (or hacking o
 curl -fsSL https://raw.githubusercontent.com/ahmd-sh/hntui/main/install.sh | sh
 ```
 
-Installs a self-contained binary to `~/.local/bin`. You can also grab a binary for your platform directly from the [releases page](https://github.com/ahmd-sh/hntui/releases). Binaries cover macOS (Apple Silicon) and Linux (x64, arm64) — on an Intel Mac, use the Bun install below.
+Installs the binary to `~/.local/bin`. You can also grab a binary for your platform directly from the [releases page](https://github.com/ahmd-sh/hntui/releases). Binaries cover macOS (Apple Silicon and Intel) and Linux (x64, arm64; static, so any distro).
 
-### With Bun
+To install a specific version, set `HNTUI_VERSION`:
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/ahmd-sh/hntui/main/install.sh | HNTUI_VERSION=0.6.0 sh
+```
+
+### With npm or Bun
+
+```bash
+npm install -g @ahmd-sh/hntui
+# or
 bun add -g @ahmd-sh/hntui
 ```
 
 Or run it once without installing:
 
 ```bash
-bunx @ahmd-sh/hntui
+npx @ahmd-sh/hntui
 ```
+
+The package pulls in only the binary for your platform.
 
 ## Run
 
@@ -62,7 +72,7 @@ Press `q` (or `Ctrl-C`) to quit.
 hntui update
 ```
 
-Checks the latest release and, for binary installs, replaces itself in place. Bun installs update with `bun add -g @ahmd-sh/hntui` instead (`hntui update` will tell you so). When a newer release exists, the status bar shows a quiet hint. `hntui --version` prints the installed version.
+Checks the latest release and, for binary installs, replaces itself in place (after checking the new binary runs on your machine). If anything goes wrong, nothing is changed, and hntui explains what happened and what to try next. npm and Bun installs update through their package manager instead (`hntui update` will tell you the command). When a newer release exists, the status bar shows a quiet hint. `hntui --version` prints the installed version.
 
 ## Keybindings
 
@@ -75,23 +85,41 @@ Most things you can do with the keyboard, you can do with a mouse too.
 - Click a tab to switch feeds.
 - Click the `Y` tile to refresh the current feed (or to exit a story back to its list).
 - Click any story row to select it. Click it again to open the comments.
-- Right-click a story to open a context menu with Save, Open URL, and Open Comments.
+- Right-click a story to open a context menu with Save, Open URL, Open Comments, and Copy Link.
 - Click a comment's header line to collapse or expand its subtree.
 - Double-click a comment's body to open its links popup.
 - Click the story URL in the detail header to open it in your browser.
 - Click outside a popup or context menu to dismiss it.
-- Use your scroll wheel to scroll lists and comment trees.
+- Use your scroll wheel to scroll lists and comment trees, or drag the scrollbar.
+
+Prefer the keyboard? Set `mouse = false` (see [Configuration](#configuration)) and your terminal keeps the mouse to itself.
 
 ### Selecting and copying text
 
-Because the app captures mouse events, your terminal's normal click-and-drag selection is intercepted. To select text the regular way:
+Press `Y` to copy what's in focus: the story's link in a list, the selected comment's text in a thread, or the selected link in the links popup.
 
-- On macOS (Terminal.app, iTerm2, WezTerm, Ghostty), hold `Option` while you drag, then `Cmd-C`.
-- On Linux (Kitty, Alacritty, WezTerm, GNOME Terminal), hold `Shift` while you drag, then `Ctrl-Shift-C`.
+For anything else, select it in your terminal. While hntui has the mouse, hold a modifier as you drag: `Shift` in most terminals (Ghostty, WezTerm, Kitty, Alacritty, GNOME Terminal), `Option` in iTerm2.
+
+With `mouse = false`, a plain drag selects.
+
+## Configuration
+
+Settings live in `~/.config/hntui/config.toml`. `hntui config` to show where it is and what's in effect (the first time, it creates the file with every setting commented); `hntui config edit` to open it in your `$EDITOR`.
+
+```toml
+# Theme at startup: "last" (whatever `t` left it on), "dark" or "light".
+theme = "last"
+
+# Mouse support: clicks, the scroll wheel, the right-click menu. Set it to
+# false to leave the mouse to your terminal, so click-and-drag selects text.
+mouse = true
+```
+
+Flags override the file for a single run: `hntui --theme light`, `hntui --no-mouse` (or `--mouse`). A setting hntui doesn't understand is reported in the status bar, and the rest still apply.
 
 ## Themes
 
-Press `t` to toggle. The dark theme is mostly black with orange accents. The light theme is faithful to news.ycombinator.com: white background, orange topbar, the familiar beige row highlight, and HN's classic grey byline text.
+Press `t` to toggle. The dark theme is mostly black with orange accents. The light theme is faithful to news.ycombinator.com: white background, orange topbar, the familiar beige row highlight, and HN's classic grey byline text. hntui starts in whichever theme you left it on, unless `theme` in the config says otherwise.
 
 ## Saved posts
 
@@ -104,9 +132,10 @@ Press `s` on any story to save it. Saved posts get a small star next to the titl
 ```bash
 git clone https://github.com/ahmd-sh/hntui.git
 cd hntui
-bun install
-bun dev    # hot reload
+cargo run --release
 ```
+
+`HN_DEMO=1 cargo run --release` adds a synthetic comment to the first story you open, with one link of each kind (an HN story, an HN comment, a dead HN link, an external site) for trying out link handling.
 
 Data comes from the public [Hacker News Firebase API](https://github.com/HackerNews/API).
 
@@ -114,21 +143,22 @@ Data comes from the public [Hacker News Firebase API](https://github.com/HackerN
 
 Pushing a `v*` tag triggers two workflows:
 
-- `.github/workflows/release.yml` cross-compiles standalone binaries (`bun build --compile`) for macOS and Linux (arm64 and x64), smoke-tests the Linux build against the live API, and attaches the tarballs to a GitHub release. This is what `install.sh` downloads.
-- `.github/workflows/publish.yml` publishes `@ahmd-sh/hntui` to npm via OIDC trusted publishing, with a [SLSA provenance attestation](https://slsa.dev/) linking the tarball back to the exact commit and workflow run that produced it. It skips gracefully if the version is already on npm.
+- `.github/workflows/release.yml` builds the binaries (macOS arm64 and x64, static Linux arm64 and x64), smoke-tests them, and attaches the tarballs to a GitHub release. This is what `install.sh` and `hntui update` download.
+- `.github/workflows/publish.yml` runs once the release is up: it repackages those binaries for npm (`@ahmd-sh/hntui` plus one `@ahmd-sh/hntui-<os>-<arch>` package per platform) and publishes them via OIDC trusted publishing, with a [SLSA provenance attestation](https://slsa.dev/) linking each tarball back to the exact commit and workflow run that produced it. Versions already on npm are skipped.
 
-To release a new version:
+To release a new version, bump `version` in `Cargo.toml`, then:
 
 ```bash
-npm version patch   # or minor / major
-git push --follow-tags
+cargo build                       # refreshes Cargo.lock
+git commit -am "0.6.1" && git tag -a v0.6.1 -m 0.6.1
+git push --follow-tags            # pushes annotated tags only, hence -a
 ```
 
 ## Acknowledgments
 
-- [OpenTUI](https://github.com/anomalyco/opentui) by Anomaly. The native TUI core that makes all of this possible.
+- [OpenTUI](https://github.com/anomalyco/opentui) by Anomaly. hntui was first built on it, and its look is the one this version reproduces, cell for cell.
 - [opentui-spinner](https://github.com/msmps/opentui-spinner) by Matt Simpson. The Knight Rider loading scanner is adapted from `examples/knight-rider/utils.ts` (MIT).
-- [Effect](https://effect.website) for empowering the data layer under the hood.
+- [ratatui](https://ratatui.rs) for the terminal output, and [Effect](https://effect.website), which powered the data layer of the TypeScript version.
 - [Hacker News](https://news.ycombinator.com) for the content and the open API.
 
 ## License
